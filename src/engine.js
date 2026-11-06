@@ -1,0 +1,18 @@
+import { hexagonVertices } from './geometry.js';
+export { xy } from './geometry.js';
+
+export const shapes=[{name:'Triangle',v:[[0,0],[1,0],[0,1]]},{name:'Rhombus',v:[[0,0],[1,0],[1,1],[0,1]]},{name:'Trapezoid',v:[[0,0],[2,0],[1,1],[0,1]]},{name:'Hexagon',v:hexagonVertices([0,0],1)},{name:'Large triangle',v:[[0,0],[2,0],[0,2]]},{name:'Large rhombus',v:[[0,0],[2,0],[2,2],[0,2]]},{name:'Large trapezoid',v:[[0,0],[4,0],[2,2],[0,2]]}];
+const key=p=>p.join(',');const edge=(a,b)=>[key(a),key(b)].sort().join('|');
+function inside(p,v){let signs=v.map((a,i)=>{let b=v[(i+1)%v.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])});return signs.every(x=>x>=-1e-6)||signs.every(x=>x<=1e-6)}
+export const centers=[[0,0],[2,2],[-2,4],[-4,2],[-2,-2],[2,-4],[4,-2]];
+// Bonus dots run clockwise from the lower-right region: 3, 1, 3, 1, 3, 1.
+export const regionBonuses=[0,30,10,30,10,30,10];
+const hex=hexagonVertices([0,0]);
+export const cells=[];export const regions=centers.map(()=>[]);
+for(let x=-7;x<7;x++)for(let y=-7;y<7;y++)for(let t=0;t<2;t++){let v=t?[[x+1,y],[x+1,y+1],[x,y+1]]:[[x,y],[x+1,y],[x,y+1]],p=[v.reduce((s,a)=>s+a[0],0)/3,v.reduce((s,a)=>s+a[1],0)/3],r=centers.findIndex(c=>inside([p[0]-c[0],p[1]-c[1]],hex));if(r>=0){let id=cells.length;cells.push({v,p,r,edges:v.map((a,i)=>edge(a,v[(i+1)%3]))});regions[r].push(id)}}
+export const edgeCells=new Map();cells.forEach((c,i)=>c.edges.forEach(e=>edgeCells.set(e,[...(edgeCells.get(e)||[]),i])));
+export function vertices(type,rot,x,y){return shapes[type].v.map(p=>{let [a,b]=p;for(let i=0;i<rot;i++)[a,b]=[-b,a+b];return[a+x,b+y]})}
+const geometry=new Map();
+export function placement(board,type,rot,x,y){let k=[type,rot,x,y].join('/'),g=geometry.get(k);if(g===undefined){let v=vertices(type,rot,x,y),ids=cells.flatMap((c,i)=>inside(c.p,v)?[i]:[]),area=Math.abs(v.reduce((s,a,i)=>{let b=v[(i+1)%v.length];return s+a[0]*b[1]-a[1]*b[0]},0));if(ids.length!==area)g=null;else {let sides=v.map((a,j)=>{let b=v[(j+1)%v.length],n=Math.max(Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1]),Math.abs(b[0]+b[1]-a[0]-a[1]));return Array.from({length:n},(_,k)=>{let p=[a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n],q=[a[0]+(b[0]-a[0])*(k+1)/n,a[1]+(b[1]-a[1])*(k+1)/n];return (edgeCells.get(edge(p,q))||[]).filter(i=>!ids.includes(i))})});g={v,ids,sides,central:ids.every(i=>cells[i].r===0)}}geometry.set(k,g)}if(!g||g.ids.some(i=>board[i]))return null;let empty=!board.some(Boolean);if(empty&&!g.central)return null;let count=0;for(let side of g.sides){let touch=side.filter(ns=>ns.some(i=>empty?cells[i].r!==0:board[i])).length;if(touch&&touch<side.length)return null;if(touch===side.length)count++}if(!count)return null;const completedRegions=regions.flatMap((ids,region)=>regionBonuses[region]&&!ids.every(id=>board[id])&&ids.every(id=>board[id]||g.ids.includes(id))?[{region,points:regionBonuses[region]}]:[]);const bonus=completedRegions.reduce((sum,item)=>sum+item.points,0);return{type,rot,x,y,ids:g.ids,score:count*5+bonus,bonus,completedRegions,v:g.v}}
+export function moves(board,hand){let out=[];for(let type=0;type<7;type++)if(hand[type])for(let rot=0;rot<6;rot++)for(let x=-6;x<=6;x++)for(let y=-6;y<=6;y++){let p=placement(board,type,rot,x,y);if(p)out.push(p)}return out}
+export const penalty=hand=>hand.reduce((s,n,i)=>s+n*shapes[i].v.length*5,0);

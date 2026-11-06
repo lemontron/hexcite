@@ -1,11 +1,8 @@
-import { shapes, vertices, xy } from './engine.js';
+import { vertices } from './engine.js?source';
+import { xy, bounds } from './geometry.js';
+import { boardPoint, screenPoint, screenScale } from './board-coordinates.js';
 
-const bounds = points => {
-  const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
-  return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
-};
-
-export function createDock({ dock, board, model, select, orient, preview, reducedMotion }) {
+export function createDock({ dock, board, model, select, orient, preview }) {
   const ns = 'http://www.w3.org/2000/svg';
   const overlay = document.createElementNS(ns, 'svg');
   overlay.classList.add('floating-piece');
@@ -21,9 +18,9 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
   function enabled() { const m = model(); return !m.busy && !m.over && !m.hidden; }
   function screenPoints(v) {
     const matrix = board.getScreenCTM();
-    return v.map(p => { const [x, y] = xy(p); const q = new DOMPoint(x * 39, y * 39).matrixTransform(matrix); return [q.x, q.y]; });
+    return v.map(p => { const q = screenPoint(boardPoint(p), matrix); return [q.x, q.y]; });
   }
-  function boardScale() { const m = board.getScreenCTM(); return Math.hypot(m.a, m.b) * 39; }
+  function boardScale() { return screenScale(board.getScreenCTM()); }
   function shapePoints() {
     const m = model(), points = vertices(m.type, m.rotation, 0, 0).map(xy), center = bounds(points);
     desiredPoints = points.map(p => [p[0] - center.x, p[1] - center.y]);
@@ -33,7 +30,7 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
   }
   function wake() { if (!frame) { lastTime = performance.now(); frame = requestAnimationFrame(animate); } }
   function animate(time) {
-    const alpha = reducedMotion() ? 1 : 1 - Math.exp(-Math.min(time - lastTime, 40) / 42);
+    const alpha = 1 - Math.exp(-Math.min(time - lastTime, 40) / 42);
     lastTime = time;
     let error = 0;
     for (const k of ['x', 'y', 'scale']) { position[k] += (goal[k] - position[k]) * alpha; error += Math.abs(goal[k] - position[k]); }
@@ -49,7 +46,7 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
   }
   function follow(x, y) {
     pointer = { x, y };
-    const desired = { x, y: y - 90 };
+    const desired = { x, y };
     const m = model();
     let best = null, nearest = Infinity;
     const candidates = m.moves.filter(move => move.type === m.type && move.rot === m.rotation);
@@ -71,21 +68,18 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     shapePoints();
     wake();
   }
-  function magnify(x) {
-    for (const item of dock.children) {
-      // Layout centers do not include the animated transform.
-      const center = dock.getBoundingClientRect().left + item.offsetLeft + item.offsetWidth / 2;
-      const proximity = Math.max(0, 1 - Math.abs(x - center) / 90);
-      item.style.setProperty('--dock-zoom', 1 + proximity * .65);
-      item.style.setProperty('--dock-lift', `${-proximity * 25}px`);
-    }
-  }
-  function clearMagnify() {
-    for (const item of dock.children) { item.style.removeProperty('--dock-zoom'); item.style.removeProperty('--dock-lift'); item.classList.remove('docked-source'); }
+  function clearSource() {
+    for (const item of dock.children) item.classList.remove('docked-source');
   }
   function dockType(x) {
-    const rect = dock.getBoundingClientRect();
-    return Math.max(0, Math.min(shapes.length - 1, Math.floor((x - rect.left) / rect.width * shapes.length)));
+    // Slot widths follow each shape; use actual boundaries, including gaps.
+    const items = [...dock.children];
+    const index = items.findIndex((item, i) => {
+      const rect = item.getBoundingClientRect();
+      const next = items[i + 1]?.getBoundingClientRect();
+      return x < (next ? (rect.right + next.left) / 2 : Infinity);
+    });
+    return Number(items[index]?.dataset.type ?? -1);
   }
   function pick(type, x, y, initial) {
     if (!model().hand[type]) return;
@@ -93,16 +87,18 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     floating = true;
     overlay.classList.add('visible');
     shapePoints();
+    const item = [...dock.children].find(item => Number(item.dataset.type) === type);
     if (initial) {
-      const rect = dock.children[type].getBoundingClientRect();
-      position = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, scale: rect.width / 4.4 };
+      const source = item.querySelector('polygon');
+      const rect = source.getBoundingClientRect();
+      const matrix = source.getScreenCTM();
+      position = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, scale: Math.hypot(matrix.a, matrix.b) };
       currentPoints = desiredPoints.map(p => [...p]);
     }
-    clearMagnify();
-    dock.children[type]?.classList.add('docked-source');
-    magnify(x);
+    clearSource();
+    item?.classList.add('docked-source');
     setSlot(null);
-    pointer = { x, y };
+    pointer = { x, y: y - 90 };
     goal = { x, y: y - 90, scale: boardScale() };
     wake();
   }
@@ -113,9 +109,13 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     event.preventDefault();
     const target = source === 'dock' ? dock : source === 'float' ? overlay : board;
     target.setPointerCapture(event.pointerId);
-    gesture = { id: event.pointerId, source, startX: event.clientX, startY: event.clientY, moved: false, detached: source !== 'dock' };
+    gesture = {
+      id: event.pointerId, source,
+      startX: event.clientX, startY: event.clientY,
+      pieceX: goal.x, pieceY: goal.y,
+      moved: false, detached: source !== 'dock',
+    };
     if (source === 'dock') pick(dockType(event.clientX), event.clientX, event.clientY, !floating);
-    if (source === 'float') follow(event.clientX, event.clientY);
   }
   function move(event) {
     if (!gesture || event.pointerId !== gesture.id) return;
@@ -124,19 +124,28 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     if (gesture.source === 'dock' && !gesture.detached) {
       if (event.clientY < dock.getBoundingClientRect().top - 25) {
         gesture.detached = true;
-        clearMagnify();
+        clearSource();
       } else {
         pick(dockType(event.clientX), event.clientX, event.clientY, false);
         return;
       }
     }
-    if (gesture.moved || gesture.source === 'float') follow(event.clientX, event.clientY);
+    if (gesture.moved) {
+      if (gesture.source === 'dock') {
+        follow(event.clientX, event.clientY - 90);
+      } else {
+        follow(
+          gesture.pieceX + event.clientX - gesture.startX,
+          gesture.pieceY + event.clientY - gesture.startY,
+        );
+      }
+    }
   }
   function up(event) {
     if (!gesture || event.pointerId !== gesture.id) return;
     const done = gesture;
     gesture = null;
-    clearMagnify();
+    clearSource();
     if (event.type === 'pointercancel') return;
     if (!done.moved && done.source !== 'dock') { rotate(); return; }
 
@@ -145,8 +154,7 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     if (!enabled() || !floating) return;
     orient((model().rotation + 1) % 6);
     shapePoints();
-    if (pointer) follow(pointer.x, pointer.y);
-    else follow(goal.x, goal.y + 90);
+    follow(goal.x, goal.y);
   }
   function showMove(move) {
     floating = true;
@@ -164,7 +172,7 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     pointer = null;
     slot = null;
     overlay.classList.remove('visible', 'legal');
-    clearMagnify();
+    clearSource();
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
   }
@@ -175,7 +183,7 @@ export function createDock({ dock, board, model, select, orient, preview, reduce
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', up);
     target.addEventListener('pointercancel', up);
-    target.addEventListener('lostpointercapture', e => { if (gesture?.id === e.pointerId) { gesture = null; clearMagnify(); } });
+    target.addEventListener('lostpointercapture', e => { if (gesture?.id === e.pointerId) { gesture = null; clearSource(); } });
   }
   window.addEventListener('resize', () => { if (floating) { if (pointer) follow(pointer.x, pointer.y); else if (slot) showMove(slot); } });
   return { reset, rotate, showMove };

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icon.svg">
+    <link rel="stylesheet" href="style.css?source">
+    <title>Hexcite</title>
+</head>
+<body>
+<section id="title-screen" aria-label="Title screen">
+    <div class="title-content">
+        <h1>HEXCITE</h1>
+        <div class="start-tiles">
+            <button id="one-player" class="start-tile">
+                <span class="tile-number">1P</span>
+                <span class="tile-detail">Against the computer</span>
+            </button>
+            <button id="two-player" class="start-tile second">
+                <span class="tile-number">2P</span>
+                <span class="tile-detail">Play on this device</span>
+            </button>
+        </div>
+        <button id="resume" class="resume" hidden>Resume match</button>
+    </div>
+</section>
+<main id="game-screen" hidden inert>
+    <section class="game">
+        <div id="scores"></div>
+        <div class="playarea">
+            <div id="opponent-pieces" class="piece-display" aria-label="Opponent pieces"></div>
+            <div class="board-area">
+                <svg id="board" viewBox="-270 -250 540 500" role="group" aria-label="Hexagonal game board"></svg>
+                <div id="result" hidden role="status" aria-live="polite">
+                    <div class="result-titlebar">Match complete</div>
+                    <p id="result-message"></p>
+                    <button id="play-again" class="primary">Play again</button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="rack">
+        <div class="controls">
+            <button id="hint" class="quiet">Find a move</button>
+            <button id="place" class="primary" hidden disabled>Place piece</button>
+            <button id="pass" class="quiet" hidden>Pass</button>
+        </div>
+        <div id="pieces" class="piece-display" aria-label="Piece dock"></div>
+
+    </section>
+</main>
+<script type="module" src="main.js"></script>
+</body>
+</html>
