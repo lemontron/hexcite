@@ -11,7 +11,7 @@
 </head>
 <body>
 <section id="title-screen">
-    <div class="title-content">
+    <div id="main-menu" class="title-content">
         <h1>HEXCITE</h1>
         <div class="start-tiles">
             <button id="one-player" class="start-tile">
@@ -23,7 +23,15 @@
                 <span class="tile-detail">Play on this device</span>
             </button>
         </div>
+        <button id="practice" class="practice-start">Practice <span>50 original boards</span></button>
         <button id="resume" class="resume" hidden>Resume Match</button>
+    </div>
+    <div id="practice-menu" class="title-content" hidden>
+        <button id="practice-back" class="quiet">← Back</button>
+        <h2>Practice</h2>
+        <p>Beat the computer to clear each board.</p>
+        <p id="practice-progress"></p>
+        <div id="practice-boards" aria-label="Choose a practice board"></div>
     </div>
 </section>
 <main id="game-screen" hidden inert>
@@ -34,12 +42,15 @@
     <div class="board-area">
         <svg id="board" viewBox="-270 -250 540 500"></svg>
         <div id="result" hidden>
-            <div class="result-titlebar">Match Complete</div>
-            <p id="result-message"></p>
+            <div id="result-title" class="result-titlebar">Match Complete</div>
+            <p id="result-message" aria-live="polite"></p>
             <button id="play-again" class="primary">Play Again</button>
         </div>
     </div>
     <div class="controls">
+        <button id="menu" class="quiet">Menu</button>
+        <span id="practice-status" hidden aria-label="Practice board"></span>
+        <button id="retry" class="quiet" hidden>Retry</button>
         <button id="hint" class="quiet">Hint</button>
         <button id="place" class="primary" hidden disabled>Place Piece</button>
         <button id="pass" class="quiet" hidden>Pass</button>

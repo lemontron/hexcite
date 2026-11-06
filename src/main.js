@@ -4,6 +4,7 @@ import { createDock } from './dock.js';
 import { createPieceDisplay, shapeColors } from './piece-display.js';
 import { hexagonVertices } from './geometry.js';
 import { BOARD_SCALE, boardPoint, svgPoints, screenPoint } from './board-coordinates.js';
+import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './practice.js';
 
 const $ = id => document.getElementById(id);
 const storageKey = 'hexcite-pocket-v1';
@@ -15,6 +16,13 @@ let legal = [];
 let busy = false;
 let transitioning = false;
 let scoring = null;
+let computerTimer;
+const progressKey = 'hexcite-practice-progress-v1';
+let completed = new Set();
+try {
+	const saved = JSON.parse(localStorage.getItem(progressKey));
+	if (Array.isArray(saved)) completed = new Set(saved.filter(n => Number.isInteger(n) && n >= 1 && n <= 50));
+} catch { /* Ignore invalid practice progress. */ }
 
 function svg(tag, attributes) {
 	const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -41,18 +49,22 @@ function save() {
 	localStorage.setItem(storageKey, JSON.stringify(state));
 }
 
-function init(mode) {
-	const hand = [2, 2, 2, 1, 2, 1, 1];
-	for (let i = 0; i < 3; i++) hand[Math.floor(Math.random() * shapes.length)]++;
+function init(mode, number = 1) {
+	const hands = Array.from({length: 2}, () => {
+		const hand = [2, 2, 2, 1, 2, 1, 1];
+		for (let i = 0; i < 3; i++) hand[Math.floor(Math.random() * shapes.length)]++;
+		return hand;
+	});
 	state = {
 		board: Array(cells.length).fill(0),
-		hands: [[...hand], [...hand]],
+		hands,
 		scores: [0, 0],
 		turn: 0,
 		placed: [],
 		mode,
 		over: false,
 	};
+	if (mode === 'practice') state = createPracticeState(number);
 	selected = 0;
 	rotation = 0;
 	busy = false;
@@ -61,29 +73,45 @@ function init(mode) {
 }
 
 function refresh() {
+	clearTimeout(computerTimer);
 	dock.reset();
 	legal = state.over ? [] : moves(state.board, state.hands[state.turn]);
 	if (!state.over && !legal.length && !moves(state.board, state.hands[1 - state.turn]).length) {
 		state.over = true;
 		state.scores = state.scores.map((score, player) => score - penalty(state.hands[player]));
+		if (practiceWon(state)) {
+			completed.add(state.practiceNumber);
+			localStorage.setItem(progressKey, JSON.stringify([...completed]));
+		}
 		save();
 	}
 	if (!state.hands[state.turn][selected]) selected = state.hands[state.turn].findIndex(n => n > 0);
 	preview = null;
-	busy = !state.over && state.mode === 'ai' && state.turn === 1;
+	busy = !state.over && state.mode !== 'local' && state.turn === 1;
 	render();
-	if (busy) setTimeout(computerMove, 500);
+	if (busy) computerTimer = setTimeout(computerMove, 500);
 }
 
 function computerMove() {
+	if ($('game-screen').hidden || state.over || scoring) return;
 	if (!legal.length) return pass();
+	const opening = practiceOpening(state, legal);
+	if (opening) return commit(opening);
 	const ranked = legal.map(move => ({move, value: move.score + move.ids.length * .8 + Math.random() * 3}));
 	ranked.sort((a, b) => b.value - a.value);
 	commit(ranked[0].move);
 }
 
 function render() {
-	const names = state.mode === 'ai' ? ['You', 'Computer'] : ['Player 1', 'Player 2'];
+	const practice = state.mode === 'practice';
+	const names = state.mode !== 'local' ? ['You', 'Computer'] : ['Player 1', 'Player 2'];
+	$('practice-status').hidden = !practice;
+	$('practice-status').textContent = practice ? `${state.practiceNumber} / ${practiceBoards.length}` : '';
+	$('retry').hidden = !practice || state.over;
+	$('retry').disabled = !!scoring;
+	$('menu').disabled = !!scoring;
+	$('result-title').textContent = practice ? `Practice ${state.practiceNumber} / ${practiceBoards.length}` : 'Match Complete';
+	$('play-again').textContent = practice ? practiceWon(state) ? state.practiceNumber < practiceBoards.length ? 'Next Board' : 'Choose a Board' : 'Try Again' : 'Play Again';
 	state.scores.forEach((score, player) => {
 		const scoreElement = $(`player-${player + 1}-score`);
 		scoreElement.parentElement.classList.toggle('inactive', !state.over && state.turn !== player);
@@ -95,7 +123,7 @@ function render() {
 	});
 	$('result').hidden = !state.over;
 	$('result-message').textContent = state.over
-		? state.scores[0] === state.scores[1] ? 'Match drawn' : names[state.scores[0] > state.scores[1] ? 0 : 1] + ' wins!'
+		? practice ? practiceWon(state) ? state.practiceNumber === practiceBoards.length ? 'Final board cleared!' : 'Board cleared!' : 'Beat the computer to clear this board.' : state.scores[0] === state.scores[1] ? 'Match drawn' : names[state.scores[0] > state.scores[1] ? 0 : 1] + ' wins!'
 		: '';
 
 	playerPieces.forEach((display, player) => display.render({
@@ -250,6 +278,7 @@ async function commit(move) {
 	state.scores[player] += valid.score;
 	state.placed.push({...valid, player});
 	state.turn = 1 - player;
+	if (state.mode === 'practice') state.turnsPlayed++;
 	save();
 	scoring = {player, points: valid.score};
 	busy = true;
@@ -270,6 +299,7 @@ async function commit(move) {
 function pass() {
 	if (legal.length || state.over || scoring) return;
 	state.turn = 1 - state.turn;
+	if (state.mode === 'practice') state.turnsPlayed++;
 	save();
 	refresh();
 }
@@ -307,7 +337,7 @@ $('place').onclick = () => {
 };
 $('hint').onclick = () => {
 	const preferred = legal.filter(move => move.type === selected);
-	const best = [...(preferred.length ? preferred : legal)].sort((a,
+	const best = practiceOpening(state, legal) || [...(preferred.length ? preferred : legal)].sort((a,
 		b) => b.score - a.score || b.ids.length - a.ids.length)[0];
 	if (!best) return;
 	selected = best.type;
@@ -318,18 +348,49 @@ $('hint').onclick = () => {
 $('pass').onclick = pass;
 $('play-again').onclick = () => {
 	if (!state.over || scoring) return;
-	init(state.mode);
+	if (practiceWon(state) && state.practiceNumber === practiceBoards.length) return showMenu(true);
+	init(state.mode, (state.practiceNumber || 1) + (practiceWon(state) ? 1 : 0));
 	$('hint').focus({preventScroll: true});
 };
+$('retry').onclick = () => {
+	if (!scoring) init('practice', state.practiceNumber);
+};
+function renderPracticeMenu() {
+	$('practice-progress').textContent = `${completed.size} of ${practiceBoards.length} boards cleared`;
+	$('practice-boards').replaceChildren(...practiceBoards.map(({number}) => {
+		const button = document.createElement('button');
+		button.textContent = `${number}${completed.has(number) ? ' ✓' : ''}`;
+		button.className = completed.has(number) ? 'cleared' : '';
+		button.setAttribute('aria-label', `Practice board ${number}${completed.has(number) ? ', cleared' : ''}`);
+		button.onclick = () => startGame('practice', false, number);
+		return button;
+	}));
+}
+function showMenu(practice = false) {
+	if (scoring || transitioning) return;
+	clearTimeout(computerTimer);
+	dock.reset();
+	$('game-screen').hidden = true;
+	$('game-screen').inert = true;
+	$('title-screen').hidden = false;
+	$('main-menu').hidden = practice;
+	$('practice-menu').hidden = !practice;
+	$('resume').hidden = !state || state.over;
+	renderPracticeMenu();
+	(practice ? $('practice-back') : $('one-player')).focus({preventScroll: true});
+}
+$('menu').onclick = () => showMenu(state.mode === 'practice');
+$('practice').onclick = () => showMenu(true);
+$('practice-back').onclick = () => showMenu(false);
 document.addEventListener('keydown', event => {
 	if ($('game-screen').hidden || transitioning) return;
 	if (event.key.toLowerCase() === 'r' && !busy && !state.over) dock.rotate();
 });
 
-async function startGame(mode, resume = false) {
+async function startGame(mode, resume = false, number = 1) {
 	if (transitioning) return;
 	transitioning = true;
-	const buttons = document.querySelectorAll('.start-tile,.resume');
+	const buttons = document.querySelectorAll('#title-screen button');
 	buttons.forEach(button => button.disabled = true);
 	const title = $('title-screen');
 	await title.animate([{opacity: 1}, {opacity: 0}], {
@@ -340,7 +401,7 @@ async function startGame(mode, resume = false) {
 	title.hidden = true;
 	title.getAnimations().forEach(animation => animation.cancel());
 	if (resume) refresh();
-	else init(mode);
+	else init(mode, number);
 	const game = $('game-screen');
 	game.hidden = false;
 	game.inert = false;
@@ -363,6 +424,7 @@ if (state && !state.over) $('resume').hidden = false;
 $('one-player').onclick = () => startGame('ai');
 $('two-player').onclick = () => startGame('local');
 $('resume').onclick = () => startGame(state.mode, true);
+renderPracticeMenu();
 // Prevent native selection and long-press UI from interrupting game gestures.
 for (const type of ['contextmenu', 'selectstart', 'dragstart']) {
 	document.addEventListener(type, event => event.preventDefault(), {capture: true});
