@@ -22,8 +22,10 @@ function svg(tag, attributes) {
 	return element;
 }
 
-const playerPieces = createPieceDisplay($('pieces'), {
+const docks = [$('player-1-pieces'), $('player-2-pieces')];
+const playerPieces = docks.map((container, player) => createPieceDisplay(container, {
 	onSelect: type => {
+		if (state.turn !== player || busy || state.over) return;
 		selected = type;
 		rotation = 0;
 		const move = legal.find(move => move.type === type);
@@ -33,8 +35,7 @@ const playerPieces = createPieceDisplay($('pieces'), {
 			dock.showMove(move);
 		}
 	},
-});
-const opponentPieces = createPieceDisplay($('opponent-pieces'));
+}));
 
 function save() {
 	localStorage.setItem(storageKey, JSON.stringify(state));
@@ -83,18 +84,22 @@ function computerMove() {
 
 function render() {
 	const names = state.mode === 'ai' ? ['You', 'Computer'] : ['Player 1', 'Player 2'];
-	$('scores').innerHTML = state.scores.map((score, player) => `
+	state.scores.forEach((score, player) => {
+		$(`player-${player + 1}-score`).innerHTML = `
     <div class="score ${state.turn === player && !state.over ? 'active' : ''}">
       <div class="name">${player + 1}P</div>
       <strong data-score-player="${player}">${score - (scoring?.player === player ? scoring.points : 0)}</strong>
-    </div>`).join('');
+    </div>`;
+	});
 	$('result').hidden = !state.over;
 	$('result-message').textContent = state.over
 		? state.scores[0] === state.scores[1] ? 'Match drawn' : names[state.scores[0] > state.scores[1] ? 0 : 1] + ' wins!'
 		: '';
 
-	playerPieces.render({ hand: state.hands[state.turn], disabled: busy || state.over });
-	opponentPieces.render({ hand: state.hands[state.mode === 'ai' ? 1 : 1 - state.turn] });
+	playerPieces.forEach((display, player) => display.render({
+		hand: state.hands[player],
+		disabled: busy || state.over || state.turn !== player,
+	}));
 
 	draw();
 }
@@ -199,7 +204,13 @@ async function animateBonus(region) {
 	defs.append(clip, gradient);
 	const [x, y] = boardPoint(centers[region]);
 	const bandWidth = BOARD_SCALE * 4;
-	const band = svg('rect', {x: x - bandWidth / 2, y: y - bandWidth / 2, width: bandWidth, height: bandWidth, fill: `url(#bonus-rainbow-${region})`});
+	const band = svg('rect', {
+		x: x - bandWidth / 2,
+		y: y - bandWidth / 2,
+		width: bandWidth,
+		height: bandWidth,
+		fill: `url(#bonus-rainbow-${region})`,
+	});
 	const clipped = svg('g', {'clip-path': `url(#bonus-clip-${region})`});
 	clipped.append(band);
 	effect.append(defs, clipped);
@@ -262,8 +273,9 @@ function pass() {
 }
 
 const dock = createDock({
-	dock: $('pieces'), board: $('board'),
+	docks, board: $('board'),
 	model: () => ({
+		player: state.turn,
 		type: selected,
 		rotation,
 		moves: legal,

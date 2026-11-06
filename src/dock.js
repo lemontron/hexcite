@@ -2,7 +2,7 @@ import { vertices } from './engine.js';
 import { xy, bounds } from './geometry.js';
 import { boardPoint, screenPoint, screenScale } from './board-coordinates.js';
 
-export function createDock({ dock, board, model, select, orient, preview }) {
+export function createDock({ docks, board, model, select, orient, preview }) {
   const ns = 'http://www.w3.org/2000/svg';
   const overlay = document.createElementNS(ns, 'svg');
   overlay.classList.add('floating-piece');
@@ -67,9 +67,11 @@ export function createDock({ dock, board, model, select, orient, preview }) {
     wake();
   }
   function clearSource() {
-    for (const item of dock.children) item.classList.remove('docked-source');
+    for (const dock of docks) {
+      for (const item of dock.children) item.classList.remove('docked-source');
+    }
   }
-  function dockType(x) {
+  function dockType(dock, x) {
     // Slot widths follow each shape; use actual boundaries, including gaps.
     const items = [...dock.children];
     const index = items.findIndex((item, i) => {
@@ -79,7 +81,7 @@ export function createDock({ dock, board, model, select, orient, preview }) {
     });
     return Number(items[index]?.dataset.type ?? -1);
   }
-  function pick(type, x, y, initial) {
+  function pick(dock, type, x, y, initial, offsetY) {
     if (!model().hand[type]) return;
     if (type !== model().type || !floating) select(type);
     floating = true;
@@ -96,41 +98,44 @@ export function createDock({ dock, board, model, select, orient, preview }) {
     clearSource();
     item?.classList.add('docked-source');
     setSlot(null);
-    pointer = { x, y: y - 90 };
-    goal = { x, y: y - 90, scale: boardScale() };
+    pointer = { x, y: y + offsetY };
+    goal = { x, y: y + offsetY, scale: boardScale() };
     wake();
   }
-  function down(event, source) {
+  function down(event, source, dock = null) {
     if (!enabled() || gesture || (event.pointerType === 'mouse' && event.button !== 0)) return;
     if (source === 'board' && !floating) return;
-    if (source === 'dock' && !model().hand[dockType(event.clientX)]) return;
+    if (source === 'dock' && (dock !== docks[model().player] || !model().hand[dockType(dock, event.clientX)])) return;
     event.preventDefault();
     const target = source === 'dock' ? dock : source === 'float' ? overlay : board;
     target.setPointerCapture(event.pointerId);
+    const offsetY = source === 'dock' && dock.getBoundingClientRect().top < board.getBoundingClientRect().top ? 90 : -90;
     gesture = {
-      id: event.pointerId, source,
+      id: event.pointerId, source, dock, offsetY,
       startX: event.clientX, startY: event.clientY,
       pieceX: goal.x, pieceY: goal.y,
       moved: false, detached: source !== 'dock',
     };
-    if (source === 'dock') pick(dockType(event.clientX), event.clientX, event.clientY, !floating);
+    if (source === 'dock') pick(dock, dockType(dock, event.clientX), event.clientX, event.clientY, !floating, offsetY);
   }
   function move(event) {
     if (!gesture || event.pointerId !== gesture.id) return;
     event.preventDefault();
     if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > 6) gesture.moved = true;
     if (gesture.source === 'dock' && !gesture.detached) {
-      if (event.clientY < dock.getBoundingClientRect().top - 25) {
+      const rect = gesture.dock.getBoundingClientRect();
+      const detached = gesture.offsetY > 0 ? event.clientY > rect.bottom + 25 : event.clientY < rect.top - 25;
+      if (detached) {
         gesture.detached = true;
         clearSource();
       } else {
-        pick(dockType(event.clientX), event.clientX, event.clientY, false);
+        pick(gesture.dock, dockType(gesture.dock, event.clientX), event.clientX, event.clientY, false, gesture.offsetY);
         return;
       }
     }
     if (gesture.moved) {
       if (gesture.source === 'dock') {
-        follow(event.clientX, event.clientY - 90);
+        follow(event.clientX, event.clientY + gesture.offsetY);
       } else {
         follow(
           gesture.pieceX + event.clientX - gesture.startX,
@@ -174,10 +179,10 @@ export function createDock({ dock, board, model, select, orient, preview }) {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
   }
-  dock.addEventListener('pointerdown', e => down(e, 'dock'));
+  for (const dock of docks) dock.addEventListener('pointerdown', e => down(e, 'dock', dock));
   board.addEventListener('pointerdown', e => down(e, 'board'));
   polygon.addEventListener('pointerdown', e => down(e, 'float'));
-  for (const target of [dock, board, overlay]) {
+  for (const target of [...docks, board, overlay]) {
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', up);
     target.addEventListener('pointercancel', up);

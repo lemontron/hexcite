@@ -36,10 +36,11 @@ function settle() {
   assert.equal(frames.size, 0, 'Animation settles');
 }
 
-const dock = new Element(), board = new Element();
-const model = { type: 0, rotation: 0, moves: [], hand: [1], color: '#f00' };
+const dock = new Element(), otherDock = new Element(), board = new Element();
+const model = { player: 0, type: 0, rotation: 0, moves: [], hand: [1], color: '#f00' };
+const selections = [];
 const controller = createDock({
-  dock, board, model: () => model, select(type) { model.type = type; }, preview() {},
+  docks: [dock, otherDock], board, model: () => model, select(type) { model.type = type; selections.push(type); }, preview() {},
   orient(value) { model.rotation = value; },
 });
 const piece = overlay.children[0];
@@ -110,4 +111,45 @@ controller.reset();
 dock.children = [];
 pointer(dock, 'pointerdown', 50, 500);
 assert.equal(model.type, 5, 'An empty dock does not select a shape');
-console.log('Passed relative panning, tap rotation, and grabbing with exhausted or empty dock slots.');
+// Each player's dock stays in place; only the current player can pull a piece.
+controller.reset();
+board.getBoundingClientRect = () => ({left: 0, right: 400, top: 100, bottom: 500});
+for (const [container, top] of [[dock, 0], [otherDock, 550]]) {
+  container.getBoundingClientRect = () => ({left: 0, right: 400, top, bottom: top + 64});
+  const item = new Element();
+  item.dataset.type = '0';
+  item.getBoundingClientRect = () => ({left: 100, right: 120, top, bottom: top + 64});
+  const shape = new Element();
+  shape.getBoundingClientRect = () => ({left: 100, top: top + 20, width: 20, height: 20});
+  item.append(shape);
+  container.children = [item];
+}
+model.hand = [1];
+model.player = 0;
+let selectedCount = selections.length;
+pointer(otherDock, 'pointerdown', 110, 582);
+assert.equal(selections.length, selectedCount, '1P cannot pick from 2P dock');
+pointer(dock, 'pointerdown', 110, 32);
+pointer(dock, 'pointermove', 110, 180);
+settle();
+near(center(), [110, 270]);
+pointer(dock, 'pointerup', 110, 180);
+
+controller.reset();
+model.player = 1;
+selectedCount = selections.length;
+pointer(dock, 'pointerdown', 110, 32);
+assert.equal(selections.length, selectedCount, '2P cannot pick from 1P dock');
+pointer(otherDock, 'pointerdown', 110, 582);
+pointer(otherDock, 'pointermove', 110, 450);
+settle();
+near(center(), [110, 360]);
+pointer(otherDock, 'pointerup', 110, 450);
+assert.equal(selections.length, selectedCount + 1, '2P can pick from its own dock');
+
+controller.reset();
+model.busy = true;
+selectedCount = selections.length;
+pointer(otherDock, 'pointerdown', 110, 582);
+assert.equal(selections.length, selectedCount, 'No grabs during computer moves or scoring');
+console.log('Passed relative panning, rotation, empty slots, fixed player docks, turn restrictions, and both pull directions.');

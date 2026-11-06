@@ -23,32 +23,30 @@
                 <span class="tile-detail">Play on this device</span>
             </button>
         </div>
-        <button id="resume" class="resume" hidden>Resume match</button>
+        <button id="resume" class="resume" hidden>Resume Match</button>
     </div>
 </section>
 <main id="game-screen" hidden inert>
-    <section class="game">
-        <div id="scores"></div>
-        <div class="playarea">
-            <div id="opponent-pieces" class="piece-display"></div>
-            <div class="board-area">
-                <svg id="board" viewBox="-270 -250 540 500"></svg>
-                <div id="result" hidden>
-                    <div class="result-titlebar">Match complete</div>
-                    <p id="result-message"></p>
-                    <button id="play-again" class="primary">Play again</button>
-                </div>
-            </div>
-        </div>
+    <section class="player-panel" data-player="0">
+        <div id="player-1-score"></div>
+        <div id="player-1-pieces" class="piece-display"></div>
     </section>
-    <section class="rack">
-        <div class="controls">
-            <button id="hint" class="quiet">Find a move</button>
-            <button id="place" class="primary" hidden disabled>Place piece</button>
-            <button id="pass" class="quiet" hidden>Pass</button>
+    <div class="board-area">
+        <svg id="board" viewBox="-270 -250 540 500"></svg>
+        <div id="result" hidden>
+            <div class="result-titlebar">Match Complete</div>
+            <p id="result-message"></p>
+            <button id="play-again" class="primary">Play Again</button>
         </div>
-        <div id="pieces" class="piece-display"></div>
-
+    </div>
+    <div class="controls">
+        <button id="hint" class="quiet">Hint</button>
+        <button id="place" class="primary" hidden disabled>Place Piece</button>
+        <button id="pass" class="quiet" hidden>Pass</button>
+    </div>
+    <section class="player-panel" data-player="1">
+        <div id="player-2-pieces" class="piece-display"></div>
+        <div id="player-2-score"></div>
     </section>
 </main>
 <script type="module" src="main.js"></script>

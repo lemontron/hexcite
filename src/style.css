@@ -27,22 +27,22 @@ button:focus-visible { outline:2px solid #202020; outline-offset:2px; }
 .primary { background:var(--blue); color:#fff; }
 .primary:hover { background:#0066b4; }
 
+html,body,main {height:100%;}
 main {
-    height:100vh;
-    height:100dvh;
+    height:100%;
     width:100%;
     max-width:480px;
     margin:auto;
     display:grid;
-    grid-template-rows: minmax(0, 1fr) 101px;
+    grid-template-rows: 102px minmax(0, 1fr) 32px 102px;
     gap:6px;
     padding:max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     overflow:hidden;
 }
-.game { display:grid; grid-template-rows: 38px minmax(0, 1fr); min-height:0; }
-#scores { display:grid; grid-template-columns: 1fr 1fr; gap:28px; }
-.score { display:flex; align-items:center; justify-content:flex-start; gap:10px; padding:10px 9px 0; }
-.score:last-child { flex-direction:row-reverse; }
+.player-panel { display:grid; grid-template-rows: 38px 64px; min-height:0; }
+.player-panel[data-player="1"] { grid-template-rows: 64px 38px; }
+.score { height:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px; padding:10px 9px 0; }
+.player-panel[data-player="1"] .score { flex-direction:row-reverse; }
 .score .name { position:relative; font-size:18px; font-weight:400; }
 .score.active .name::before {
     content:"";
@@ -89,7 +89,6 @@ main {
 .result-titlebar { padding:8px 12px; background:#f1f1f1; border-bottom:1px solid #000; font-size:11px; }
 #result-message { margin:0; padding:28px 16px; font-size:24px; font-weight:400; text-align:center; }
 #play-again { display:block; margin:0 auto 20px; padding:8px 18px; border-radius:999px; font-size:12px; }
-.playarea { min-height:0; min-width:0; display:grid; grid-template-rows: 64px minmax(0, 1fr); }
 #board { width:100%; height:100%; min-height:0; display:block; touch-action:none; }
 .cell, .zone, .placed, .piece svg polygon, .floating-piece polygon {
     stroke:#000;
@@ -106,7 +105,6 @@ main {
 .bonus-dots { pointer-events:none; }
 .placed { pointer-events:none; }
 .bonus-rainbow { pointer-events:none; }
-.rack { display:grid; grid-template-rows: 32px 64px; gap:5px; min-height:0; }
 .controls { display:flex; justify-content:center; align-items:center; }
 .controls button { flex:none; min-width:0; padding:7px 16px; border-radius:999px; font-size:11px; line-height:16px; }
 .controls .quiet { background:#f1f1f1; }
@@ -139,12 +137,11 @@ h1 { font-size:clamp(62px, 16vw, 90px); font-weight:400; letter-spacing:-1px; li
 .resume { background:transparent; color:var(--blue); padding:12px 0; margin-top:14px; font-size:13px; }
 .resume:hover { background:transparent; text-decoration:underline; }
 
-.piece-display { display:flex; justify-content:center; position:relative; overflow:visible; gap:2px; height:64px; min-height:0; }
+.piece-display { touch-action:none; display:flex; justify-content:center; position:relative; overflow:visible; gap:2px; height:64px; min-height:0; }
 .piece:disabled { opacity:1; }
 
 /* Dock gestures use pointer capture; the floating shape stays above the finger. */
-#pieces { touch-action:none; user-select:none; }
-#pieces .piece.docked-source svg, #pieces .piece.docked-source .count { opacity:0; }
+.piece-display .piece.docked-source svg, .piece-display .piece.docked-source .count { opacity:0; }
 .floating-piece { position:fixed; inset:0; width:100%; height:100%; z-index:10; overflow:visible; pointer-events:none; display:none; touch-action:none; }
 .floating-piece.visible { display:block; }
 .floating-piece polygon { pointer-events:auto; touch-action:none; cursor:grab; }
