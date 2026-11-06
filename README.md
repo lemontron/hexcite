@@ -1,6 +1,6 @@
 # hexcite
 
-Play at https://hexcite.ace.workers.dev/.
+Play at https://hexcite.jamesloper.com/.
 
 Edit the app in `src/`. Install development dependencies with `npm install`.
 
