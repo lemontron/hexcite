@@ -2,7 +2,7 @@ import { vertices } from './engine.js';
 import { xy, bounds } from './geometry.js';
 import { boardPoint, screenPoint, screenScale } from './board-coordinates.js';
 
-export function createDock({ docks, board, model, select, orient, preview }) {
+export function createDock({ docks, board, model, select, orient, preview, reserve = () => {} }) {
   const ns = 'http://www.w3.org/2000/svg';
   const overlay = document.createElementNS(ns, 'svg');
   overlay.classList.add('floating-piece');
@@ -13,6 +13,13 @@ export function createDock({ docks, board, model, select, orient, preview }) {
   let position = { x: 0, y: 0, scale: 1 }, goal = { ...position };
   let currentPoints = [], desiredPoints = [];
   let pointer = null;
+  let reservedType = null;
+
+  function reservePiece(type) {
+    if (reservedType === type) return;
+    reservedType = type;
+    reserve(type);
+  }
 
   function enabled() { const m = model(); return !m.busy && !m.over && !m.hidden; }
   function screenPoints(v) {
@@ -66,11 +73,6 @@ export function createDock({ docks, board, model, select, orient, preview }) {
     shapePoints();
     wake();
   }
-  function clearSource() {
-    for (const dock of docks) {
-      for (const item of dock.children) item.classList.remove('docked-source');
-    }
-  }
   function dockType(dock, x) {
     // Slot widths follow each shape; use actual boundaries, including gaps.
     const items = [...dock.children];
@@ -95,8 +97,7 @@ export function createDock({ docks, board, model, select, orient, preview }) {
       position = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, scale: Math.hypot(matrix.a, matrix.b) };
       currentPoints = desiredPoints.map(p => [...p]);
     }
-    clearSource();
-    item?.classList.add('docked-source');
+    reservePiece(type);
     setSlot(null);
     pointer = { x, y: y + offsetY };
     goal = { x, y: y + offsetY, scale: boardScale() };
@@ -127,7 +128,6 @@ export function createDock({ docks, board, model, select, orient, preview }) {
       const detached = gesture.offsetY > 0 ? event.clientY > rect.bottom + 25 : event.clientY < rect.top - 25;
       if (detached) {
         gesture.detached = true;
-        clearSource();
       } else {
         pick(gesture.dock, dockType(gesture.dock, event.clientX), event.clientX, event.clientY, false, gesture.offsetY);
         return;
@@ -148,7 +148,6 @@ export function createDock({ docks, board, model, select, orient, preview }) {
     if (!gesture || event.pointerId !== gesture.id) return;
     const done = gesture;
     gesture = null;
-    clearSource();
     if (event.type === 'pointercancel') return;
     if (!done.moved && done.source !== 'dock') { rotate(); return; }
 
@@ -161,6 +160,7 @@ export function createDock({ docks, board, model, select, orient, preview }) {
   }
   function showMove(move) {
     floating = true;
+    reservePiece(model().type);
     pointer = null;
     shapePoints();
     goal = { ...bounds(screenPoints(move.v)), scale: boardScale() };
@@ -175,7 +175,7 @@ export function createDock({ docks, board, model, select, orient, preview }) {
     pointer = null;
     slot = null;
     overlay.classList.remove('visible');
-    clearSource();
+    reservePiece(null);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
   }
@@ -186,7 +186,7 @@ export function createDock({ docks, board, model, select, orient, preview }) {
     target.addEventListener('pointermove', move);
     target.addEventListener('pointerup', up);
     target.addEventListener('pointercancel', up);
-    target.addEventListener('lostpointercapture', e => { if (gesture?.id === e.pointerId) { gesture = null; clearSource(); } });
+    target.addEventListener('lostpointercapture', e => { if (gesture?.id === e.pointerId) gesture = null; });
   }
   window.addEventListener('resize', () => { if (floating) { if (pointer) follow(pointer.x, pointer.y); else if (slot) showMove(slot); } });
   return { reset, rotate, showMove };

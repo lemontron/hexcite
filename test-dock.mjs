@@ -39,9 +39,11 @@ function settle() {
 const dock = new Element(), otherDock = new Element(), board = new Element();
 const model = { player: 0, type: 0, rotation: 0, moves: [], hand: [1], color: '#f00' };
 const selections = [];
+let reserved = null;
 const controller = createDock({
   docks: [dock, otherDock], board, model: () => model, select(type) { model.type = type; selections.push(type); }, preview() {},
   orient(value) { model.rotation = value; },
+  reserve(type) { reserved = type; },
 });
 const piece = overlay.children[0];
 function center() {
@@ -56,6 +58,7 @@ function near(actual, expected) {
 }
 
 controller.showMove({ v: [[0, 0], [1, 0], [0, 1]] });
+assert.equal(reserved, 0, 'Showing a piece reserves one from its dock');
 settle();
 let origin = center();
 // Grab far from the piece: touching down alone must not move it.
@@ -91,22 +94,27 @@ pointer(overlay, 'pointermove', origin[0] + 20, origin[1] + 10);
 settle();
 near(center(), [origin[0] + 20, origin[1] + 10]);
 pointer(overlay, 'pointerup', origin[0] + 20, origin[1] + 10);
-// Exhausted types are omitted, so child indices no longer match shape types.
+// Exhausted types retain their slots and cannot be selected.
 controller.reset();
+assert.equal(reserved, null, 'Reset returns the held piece to the dock');
 model.hand = [0, 1, 0, 0, 0, 1, 0];
-dock.children = [1, 5].map((type, index) => {
+dock.children = Array.from({length: 7}, (_, type) => {
   const item = new Element();
   item.dataset.type = String(type);
-  item.getBoundingClientRect = () => ({left: index * 100, right: (index + 1) * 100});
+  item.getBoundingClientRect = () => ({left: type * 100, right: (type + 1) * 100});
   item.append(new Element());
   return item;
 });
 pointer(dock, 'pointerdown', 50, 500);
-assert.equal(model.type, 1, 'First remaining dock slot selects rhombus, not exhausted triangle');
-pointer(dock, 'pointerup', 50, 500);
+assert.equal(model.type, 0, 'An exhausted slot does not select a shape');
 pointer(dock, 'pointerdown', 150, 500);
-assert.equal(model.type, 5, 'Second remaining dock slot selects large rhombus');
+assert.equal(model.type, 1, 'Rhombus stays in its original slot');
+assert.equal(reserved, 1, 'Pickup reserves its type');
 pointer(dock, 'pointerup', 150, 500);
+pointer(dock, 'pointerdown', 550, 500);
+assert.equal(model.type, 5, 'Large rhombus stays in its original slot');
+assert.equal(reserved, 5, 'Switching pieces transfers the reservation');
+pointer(dock, 'pointerup', 550, 500);
 controller.reset();
 dock.children = [];
 pointer(dock, 'pointerdown', 50, 500);

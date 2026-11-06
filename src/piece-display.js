@@ -25,20 +25,20 @@ const totalWidth = icons.reduce((sum, icon) => sum + icon.width, 0);
 export function createPieceDisplay(container, {onSelect} = {}) {
 	return {
 		render({hand, disabled = false}) {
-			const pieces = icons.flatMap((icon, type) => {
+			const pieces = icons.map((icon, type) => {
 				const count = hand[type];
-				if (!count) return [];
 				const item = document.createElement(onSelect ? 'button' : 'div');
 				item.className = 'piece';
+				item.style.visibility = count ? 'visible' : 'hidden';
 				item.style.setProperty('--piece-color', shapeColors[type]);
 				item.style.flexBasis = `calc((100% - 12px) * ${icon.width / totalWidth})`;
 				item.dataset.type = type;
 				item.innerHTML = `<span class="piece-art" style="aspect-ratio:${icon.aspect}"><svg viewBox="${icon.viewBox}"><polygon points="${icon.points}" fill="${shapeColors[type]}"/></svg><span class="count" style="left:${icon.countX}%;top:${icon.countY}%">${count}</span></span>`;
 				if (onSelect) {
-					item.disabled = disabled;
-					item.onclick = event => { if (event.detail === 0) onSelect(type); };
+					item.disabled = disabled || !count;
+					item.onclick = event => { if (!item.disabled && event.detail === 0) onSelect(type); };
 				}
-				return [item];
+				return item;
 			});
 			container.replaceChildren(...pieces);
 		},

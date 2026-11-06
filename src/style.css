@@ -143,7 +143,6 @@ h1 { font-size:clamp(62px, 16vw, 90px); font-weight:400; letter-spacing:-1px; li
 .piece:disabled { opacity:1; }
 
 /* Dock gestures use pointer capture; the floating shape stays above the finger. */
-.piece-display .piece.docked-source svg, .piece-display .piece.docked-source .count { opacity:0; }
 .floating-piece { position:fixed; inset:0; width:100%; height:100%; z-index:10; overflow:visible; pointer-events:none; display:none; touch-action:none; }
 .floating-piece.visible { display:block; }
 .floating-piece polygon { pointer-events:auto; touch-action:none; cursor:grab; }

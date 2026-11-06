@@ -10,6 +10,7 @@ const $ = id => document.getElementById(id);
 const storageKey = 'hexcite-pocket-v1';
 let state;
 let selected = 0;
+let heldType = null;
 let rotation = 0;
 let preview = null;
 let legal = [];
@@ -126,12 +127,16 @@ function render() {
 		? practice ? practiceWon(state) ? state.practiceNumber === practiceBoards.length ? 'Final board cleared!' : 'Board cleared!' : 'Beat the computer to clear this board.' : state.scores[0] === state.scores[1] ? 'Match drawn' : names[state.scores[0] > state.scores[1] ? 0 : 1] + ' wins!'
 		: '';
 
-	playerPieces.forEach((display, player) => display.render({
-		hand: state.hands[player],
-		disabled: busy || state.over || state.turn !== player,
-	}));
+	renderDocks();
 
 	draw();
+}
+
+function renderDocks() {
+	playerPieces.forEach((display, player) => display.render({
+		hand: state.hands[player].map((count, type) => count - (player === state.turn && type === heldType ? 1 : 0)),
+		disabled: busy || state.over || state.turn !== player,
+	}));
 }
 
 function renderAction() {
@@ -306,6 +311,10 @@ function pass() {
 
 const dock = createDock({
 	docks, board: $('board'),
+	reserve: type => {
+		heldType = type;
+		renderDocks();
+	},
 	model: () => ({
 		player: state.turn,
 		type: selected,
