@@ -135,7 +135,7 @@ function render() {
 }
 
 function renderAction() {
-	const action = state.over ? null : !legal.length ? 'pass' : preview ? 'place' : 'hint';
+	const action = state.over ? null : !legal.length ? 'pass' : preview ? 'place' : state.mode === 'practice' ? null : 'hint';
 	const focused = document.activeElement;
 	for (const id of ['hint', 'place', 'pass']) {
 		$(id).hidden = id !== action;
@@ -350,7 +350,7 @@ $('play-again').onclick = () => {
 	if (!state.over || scoring) return;
 	if (practiceWon(state) && state.practiceNumber === practiceBoards.length) return showMenu(true);
 	init(state.mode, (state.practiceNumber || 1) + (practiceWon(state) ? 1 : 0));
-	$('hint').focus({preventScroll: true});
+	$(state.mode === 'practice' ? 'retry' : 'hint').focus({preventScroll: true});
 };
 $('retry').onclick = () => {
 	if (!scoring) init('practice', state.practiceNumber);
