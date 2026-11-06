@@ -85,7 +85,9 @@ function computerMove() {
 function render() {
 	const names = state.mode === 'ai' ? ['You', 'Computer'] : ['Player 1', 'Player 2'];
 	state.scores.forEach((score, player) => {
-		$(`player-${player + 1}-score`).innerHTML = `
+		const scoreElement = $(`player-${player + 1}-score`);
+		scoreElement.parentElement.classList.toggle('inactive', !state.over && state.turn !== player);
+		scoreElement.innerHTML = `
     <div class="score ${state.turn === player && !state.over ? 'active' : ''}">
       <div class="name">${player + 1}P</div>
       <strong data-score-player="${player}">${score - (scoring?.player === player ? scoring.points : 0)}</strong>

@@ -40,6 +40,7 @@ main {
     overflow:hidden;
 }
 .player-panel { display:grid; grid-template-rows: 38px 64px; min-height:0; }
+.player-panel.inactive { opacity:.4; }
 .player-panel[data-player="1"] { grid-template-rows: 64px 38px; }
 .score { height:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px; padding:10px 9px 0; }
 .player-panel[data-player="1"] .score { flex-direction:row-reverse; }
