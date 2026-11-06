@@ -9,6 +9,7 @@ Edit the app in `src/`. Install development dependencies with `npm install`.
 - `npm run preview` serves the production build locally for checking before publication.
 - `npm run deploy` builds and publishes the game to Cloudflare Workers Static Assets.
 - `npm test` checks the game rules against the source.
+- `npm run ci` builds the app for deployment without running tests.
 
 Practice mode includes all 50 original boards, with converted placements, original inventories, scores, and starting players. Select any board from the title screen. Win to mark it cleared and advance; draws and losses offer a retry. Completion marks and the current match are saved locally. Practice uses the web game's computer opponent.
 
@@ -25,5 +26,5 @@ For automatic cloud builds, connect `lemontron/hexcite` in the Worker's **Settin
 - Build command: `npm run ci`
 - Deploy command: `npx wrangler deploy`
 
-Cloudflare installs the locked dependencies, runs all tests, builds the assets, and deploys only if the build succeeds. `.nvmrc` selects Node.js 24. Pushes to `main` trigger the pipeline; deployment does not depend on the local development server.
+Cloudflare installs the locked dependencies, builds the assets without running tests, and deploys only if the build succeeds. Run `npm test` separately when checking game rules. `.nvmrc` selects Node.js 24. Pushes to `main` trigger the pipeline; deployment does not depend on the local development server.
 

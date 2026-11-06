@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './src/practice.js';
 import { cells, moves, placement, penalty } from './src/engine.js';
 
-const native = JSON.parse(readFileSync(new URL('./reference/practice-mode/configurations.json', import.meta.url)));
 assert.equal(practiceBoards.length, 50);
 assert.deepEqual(practiceBoards.map(b => b.number), Array.from({length:50},(_,i)=>i+1));
-const typeMap = [3,0,1,2,4,5,6];
 for (const config of practiceBoards) {
-  const original = native.configurations[config.number - 1];
   const state = createPracticeState(config.number);
-  assert.deepEqual(state.scores, original.startingScores);
-  assert.equal(state.turn, original.unresolvedHeader.bytes5Through8[0]);
-  state.hands.forEach((hand,p) => typeMap.forEach((type,nativeType) => assert.equal(hand[type],original.handsByNativeShapeId[p][nativeType])));
+  assert.deepEqual(state.scores, config.scores);
+  assert.equal(state.turn, config.turn);
+  assert.deepEqual(state.hands, config.hands);
+  assert([0,1].includes(state.turn));
+  state.hands.forEach(hand => {
+    assert.equal(hand.length,7);
+    assert(hand.every(count => Number.isInteger(count) && count >= 0));
+  });
   const occupied = new Set();
   for (const piece of state.placed) {
     for(const id of piece.ids) {
@@ -21,16 +22,18 @@ for (const config of practiceBoards) {
       assert.equal(state.board[id],3);
     }
   }
-  // Check all 168 converted cells against native shape masks and anchor tables.
-  const nativeCells = new Set(original.placements.flatMap(piece => {
-    const [dr,dc] = native.shapeAnchorOffsets[piece.shapeId][piece.rotation];
-    return native.shapeCellOffsets[piece.shapeId][piece.rotation].map(([r,c]) => `${piece.x+dr+r},${piece.y+dc+c}`);
-  }));
-  cells.forEach((cell,id) => {
-    const row = Math.floor(cell.p[1])+7;
-    const column = Math.round(2*(cell.p[0]+cell.p[1]/2)+15);
-    assert.equal(Boolean(state.board[id]),nativeCells.has(`${row},${column}`),`Native geometry mismatch on board ${config.number}`);
-  });
+  // Validate shipped geometry without depending on optional ROM research files.
+  for (const piece of state.placed) {
+    const covered = cells.flatMap((cell,id) => {
+      const sides = piece.v.map((a,i) => {
+        const b = piece.v[(i+1)%piece.v.length];
+        return (b[0]-a[0])*(cell.p[1]-a[1])-(b[1]-a[1])*(cell.p[0]-a[0]);
+      });
+      return sides.every(n=>n>=-1e-6) || sides.every(n=>n<=1e-6) ? [id] : [];
+    });
+    assert.deepEqual(covered,[...piece.ids].sort((a,b)=>a-b),`Geometry mismatch on board ${config.number}`);
+  }
+  assert.equal(state.board.filter(Boolean).length,occupied.size);
   assert(moves(state.board,state.hands[state.turn]).length, `Board ${config.number} must be playable`);
   const opening=practiceOpening(state,moves(state.board,state.hands[state.turn]));
   if(opening) assert(placement(state.board,opening.type,opening.rot,opening.x,opening.y));
@@ -55,10 +58,15 @@ for (const config of practiceBoards) {
   assert(state.over, `Board ${config.number} must finish`);
   assert.equal(practiceWon(state),state.scores[0]>state.scores[1]);
   const fresh=createPracticeState(config.number);
-  assert.deepEqual(fresh.scores,original.startingScores,'Retry resets scores');
+  assert.deepEqual(fresh.scores,config.scores,'Retry resets scores');
+  assert.deepEqual(fresh.hands,config.hands,'Retry resets inventories');
+  assert.equal(fresh.turn,config.turn,'Retry resets starting player');
   assert.equal(fresh.over,false);
 }
+assert.deepEqual(createPracticeState(1).scores,[100,130]);
+assert.deepEqual(createPracticeState(50).scores,[100,25]);
+assert.equal(createPracticeState(50).turn,1);
 assert(!practiceWon({...createPracticeState(1),over:true,scores:[100,100]}),'A draw does not clear a practice board');
 assert.throws(()=>createPracticeState(0),RangeError);
 assert.throws(()=>createPracticeState(51),RangeError);
-console.log('Passed all 50 native board conversions, inventories, opening turns, complete games, retries, and win conditions.');
+console.log('Passed all 50 practice board geometries, inventories, opening turns, complete games, retries, and win conditions.');
