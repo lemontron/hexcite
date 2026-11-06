@@ -102,7 +102,6 @@ main {
 .lilac-region, .mix-lilac { fill:#c6a4ef; }
 .sky-region, .mix-sky { fill:#8bd3f4; }
 .cell.center-region { fill:url(#center-mix); }
-.cell:hover { fill-opacity:.8; }
 .zone { fill:none; pointer-events:none; }
 .bonus-dots { pointer-events:none; }
 .placed { pointer-events:none; }
