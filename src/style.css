@@ -109,9 +109,10 @@ main {
 .controls button { flex:none; min-width:0; padding:7px 16px; border-radius:999px; font-size:11px; line-height:16px; }
 .controls .quiet { background:#f1f1f1; }
 .controls .quiet:hover { background:#e4e4e4; }
-.piece { position:relative; min-width:0; min-height:0; height:100%; padding:0; flex-grow:0; flex-shrink:0; background:transparent; }
+.piece { display:flex; align-items:center; min-width:0; min-height:0; height:100%; padding:0; flex-grow:0; flex-shrink:0; background:transparent; }
 .piece:is(button):hover { background:transparent; }
-.piece svg { display:block; width:100%; height:100%; overflow:visible; }
+.piece-art { display:block; position:relative; width:100%; }
+.piece svg { position:absolute; inset:0; display:block; width:100%; height:100%; overflow:visible; }
 .piece .count {
     position:absolute;
     transform:translate(-50%, -50%);
