@@ -1,4 +1,4 @@
-import { shapes } from './engine.js?source';
+import { shapes } from './engine.js';
 import { xy, bounds } from './geometry.js';
 
 export const shapeColors = ['#e53935', '#f3cf32', '#2463dd', '#299447', '#ed76b5', '#935d36', '#70c9f0'];
@@ -29,26 +29,21 @@ export function createPieceDisplay(container, { onSelect } = {}) {
   layout.observe(container);
 
   return {
-    render({ hand, selected = -1, disabled = false }) {
+    render({ hand, disabled = false }) {
       container.replaceChildren();
-      shapes.forEach((shape, type) => {
+      icons.forEach((icon, type) => {
         const count = hand[type];
         if (!count) return;
-        const icon = icons[type];
         const item = document.createElement(onSelect ? 'button' : 'div');
-        item.className = 'piece' + (onSelect && selected === type ? ' selected' : '');
+        item.className = 'piece';
         item.style.setProperty('--piece-color', shapeColors[type]);
         // Preserve scale as exhausted shapes disappear and the row closes up.
         item.style.flexBasis = `calc((100% - 12px) * ${icon.width / totalWidth})`;
         item.dataset.type = type;
-        item.setAttribute('aria-label', `${shape.name}, ${count} remaining`);
-        item.innerHTML = `<svg viewBox="${icon.viewBox}" aria-hidden="true"><polygon points="${icon.points}" fill="${shapeColors[type]}"/></svg><span class="count" aria-hidden="true">${count}</span>`;
+        item.innerHTML = `<svg viewBox="${icon.viewBox}"><polygon points="${icon.points}" fill="${shapeColors[type]}"/></svg><span class="count">${count}</span>`;
         if (onSelect) {
           item.disabled = disabled;
-          item.setAttribute('aria-pressed', selected === type);
           item.onclick = event => { if (event.detail === 0) onSelect(type); };
-        } else {
-          item.setAttribute('role', 'img');
         }
         container.append(item);
       });

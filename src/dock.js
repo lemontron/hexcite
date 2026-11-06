@@ -1,4 +1,4 @@
-import { vertices } from './engine.js?source';
+import { vertices } from './engine.js';
 import { xy, bounds } from './geometry.js';
 import { boardPoint, screenPoint, screenScale } from './board-coordinates.js';
 
@@ -6,7 +6,6 @@ export function createDock({ dock, board, model, select, orient, preview }) {
   const ns = 'http://www.w3.org/2000/svg';
   const overlay = document.createElementNS(ns, 'svg');
   overlay.classList.add('floating-piece');
-  overlay.setAttribute('aria-hidden', 'true');
   const polygon = document.createElementNS(ns, 'polygon');
   overlay.append(polygon);
   document.body.append(overlay);
@@ -41,7 +40,6 @@ export function createDock({ dock, board, model, select, orient, preview }) {
   }
   function setSlot(move) {
     slot = move;
-    overlay.classList.toggle('legal', !!move);
     preview(move);
   }
   function follow(x, y) {
@@ -171,7 +169,7 @@ export function createDock({ dock, board, model, select, orient, preview }) {
     floating = false;
     pointer = null;
     slot = null;
-    overlay.classList.remove('visible', 'legal');
+    overlay.classList.remove('visible');
     clearSource();
     if (frame) cancelAnimationFrame(frame);
     frame = 0;

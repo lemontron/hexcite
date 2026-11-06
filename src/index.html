@@ -6,11 +6,11 @@
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icon.svg">
-    <link rel="stylesheet" href="style.css?source">
+    <link rel="stylesheet" href="style.css">
     <title>Hexcite</title>
 </head>
 <body>
-<section id="title-screen" aria-label="Title screen">
+<section id="title-screen">
     <div class="title-content">
         <h1>HEXCITE</h1>
         <div class="start-tiles">
@@ -30,10 +30,10 @@
     <section class="game">
         <div id="scores"></div>
         <div class="playarea">
-            <div id="opponent-pieces" class="piece-display" aria-label="Opponent pieces"></div>
+            <div id="opponent-pieces" class="piece-display"></div>
             <div class="board-area">
-                <svg id="board" viewBox="-270 -250 540 500" role="group" aria-label="Hexagonal game board"></svg>
-                <div id="result" hidden role="status" aria-live="polite">
+                <svg id="board" viewBox="-270 -250 540 500"></svg>
+                <div id="result" hidden>
                     <div class="result-titlebar">Match complete</div>
                     <p id="result-message"></p>
                     <button id="play-again" class="primary">Play again</button>
@@ -47,7 +47,7 @@
             <button id="place" class="primary" hidden disabled>Place piece</button>
             <button id="pass" class="quiet" hidden>Pass</button>
         </div>
-        <div id="pieces" class="piece-display" aria-label="Piece dock"></div>
+        <div id="pieces" class="piece-display"></div>
 
     </section>
 </main>

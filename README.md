@@ -10,9 +10,9 @@ Edit the app in `src/`. Install development dependencies with `npm install`.
 - `npm run deploy` builds and publishes the game to Cloudflare Workers Static Assets.
 - `npm test` checks the game rules against the source.
 
-Static icons, the install manifest, and the cleanup service worker live in `src/public/` and are copied unchanged during builds. Publish the contents of `dist/` to a static HTTPS host. Generated files in `dist/` are excluded from Git.
+Static icons and the install manifest live in `src/public/` and are copied unchanged during builds. Publish the contents of `dist/` to a static HTTPS host. Generated files in `dist/` are excluded from Git.
 
-Cloudflare deployment uses `wrangler.jsonc`. Run `npx wrangler login` once to authorize your account, then `npm run deploy`. The public site uses a `workers.dev` address; custom domains can be configured later. Production HTML and the install manifest revalidate on each visit, while hashed assets are cached long-term through `src/public/_headers`.
+Cloudflare deployment uses `wrangler.jsonc`, including the `hexcite.jamesloper.com` custom domain. Run `npx wrangler login` once to authorize your account, then `npm run deploy`. Production HTML and the install manifest revalidate on each visit, while hashed assets are cached long-term through `src/public/_headers`.
 
 For automatic cloud builds, connect `lemontron/hexcite` in the Worker's **Settings → Builds** with these settings:
 

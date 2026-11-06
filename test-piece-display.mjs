@@ -19,7 +19,7 @@ let selected;
 const playerDock = createPieceDisplay(active, { onSelect: type => { selected = type; } });
 const opponentDock = createPieceDisplay(opponent);
 for (const hand of [[2, 2, 2, 1, 2, 1, 1], [0, 2, 0, 1, 0, 0, 1], [0, 0, 0, 0, 0, 0, 0]]) {
-  playerDock.render({ hand, selected: 3, disabled: true });
+  playerDock.render({ hand, disabled: true });
   opponentDock.render({ hand });
   assert.equal(active.children.length, hand.filter(Boolean).length);
   assert.equal(active.children.length, opponent.children.length);
@@ -27,7 +27,6 @@ for (const hand of [[2, 2, 2, 1, 2, 1, 1], [0, 2, 0, 1, 0, 0, 1], [0, 0, 0, 0, 0
     const other = opponent.children[index];
     assert.equal(piece.innerHTML, other.innerHTML, 'Both docks render identical shapes and counts');
     assert.equal(piece.style.flexBasis, other.style.flexBasis, 'Both docks use identical sizing');
-    assert.equal(piece.attributes['aria-label'], other.attributes['aria-label']);
     assert.equal(piece.disabled, true);
     assert.equal(other.onclick, undefined, 'Opponent dock is display only');
     piece.onclick({ detail: 0 });

@@ -1,6 +1,6 @@
 import '@fontsource/gugi/latin-400.css';
-import { shapes, cells, centers, regions, regionBonuses, placement, moves, penalty } from './engine.js?source';
-import { createDock } from './dock.js?source';
+import { shapes, cells, centers, regions, regionBonuses, placement, moves, penalty } from './engine.js';
+import { createDock } from './dock.js';
 import { createPieceDisplay, shapeColors } from './piece-display.js';
 import { hexagonVertices } from './geometry.js';
 import { BOARD_SCALE, boardPoint, svgPoints, screenPoint } from './board-coordinates.js';
@@ -84,7 +84,7 @@ function computerMove() {
 function render() {
 	const names = state.mode === 'ai' ? ['You', 'Computer'] : ['Player 1', 'Player 2'];
 	$('scores').innerHTML = state.scores.map((score, player) => `
-    <div class="score ${state.turn === player && !state.over ? 'active' : ''}" role="group" aria-label="${names[player]}${state.turn === player && !state.over ? ', active player' : ''}">
+    <div class="score ${state.turn === player && !state.over ? 'active' : ''}">
       <div class="name">${player + 1}P</div>
       <strong data-score-player="${player}">${score - (scoring?.player === player ? scoring.points : 0)}</strong>
     </div>`).join('');
@@ -93,7 +93,7 @@ function render() {
 		? state.scores[0] === state.scores[1] ? 'Match drawn' : names[state.scores[0] > state.scores[1] ? 0 : 1] + ' wins!'
 		: '';
 
-	playerPieces.render({ hand: state.hands[state.turn], selected, disabled: busy || state.over });
+	playerPieces.render({ hand: state.hands[state.turn], disabled: busy || state.over });
 	opponentPieces.render({ hand: state.hands[state.mode === 'ai' ? 1 : 1 - state.turn] });
 
 	draw();
@@ -132,7 +132,7 @@ function draw() {
 			const [x, y] = boardPoint(center);
 			const distance = Math.hypot(x, y);
 			const dots = regionBonuses[region] / 10;
-			const marker = svg('g', {class: `bonus-dots ${regionBonuses[region] === 30 ? 'lilac-region' : 'sky-region'}`, role: 'img', 'aria-label': `${regionBonuses[region]} point completion bonus`});
+			const marker = svg('g', {class: `bonus-dots ${regionBonuses[region] === 30 ? 'lilac-region' : 'sky-region'}`});
 			const title = svg('title', {});
 			title.textContent = `${dots} ${dots === 1 ? 'dot' : 'dots'} × 10 points on completion`;
 			marker.append(title);
@@ -167,7 +167,6 @@ async function animatePoints(move, player) {
 	const label = document.createElement('span');
 	label.className = 'placement-points';
 	label.textContent = `+${move.score}`;
-	label.setAttribute('aria-hidden', 'true');
 	Object.assign(label.style, {left: `${origin.x}px`, top: `${origin.y}px`});
 	document.body.append(label);
 	try {
@@ -189,7 +188,7 @@ async function animatePoints(move, player) {
 }
 
 async function animateBonus(region) {
-	const effect = svg('g', {class: 'bonus-rainbow', 'aria-hidden': 'true'});
+	const effect = svg('g', {class: 'bonus-rainbow'});
 	const defs = svg('defs', {});
 	const clip = svg('clipPath', {id: `bonus-clip-${region}`});
 	clip.append(svg('polygon', {points: svgPoints(hexagonVertices(centers[region]))}));
@@ -350,18 +349,6 @@ if (state && !state.over) $('resume').hidden = false;
 $('one-player').onclick = () => startGame('ai');
 $('two-player').onclick = () => startGame('local');
 $('resume').onclick = () => startGame(state.mode, true);
-// Retire the previous offline worker and its caches on existing installations.
-if ('serviceWorker' in navigator) {
-	navigator.serviceWorker.getRegistration('./').then(registration => {
-		if (registration?.scope === new URL('./', location.href).href) return registration.unregister();
-	}).catch(() => {});
-}
-if ('caches' in globalThis) {
-	caches.keys().then(keys => Promise.all(
-		keys.filter(key => key.startsWith('hexcite-pocket-')).map(key => caches.delete(key))
-	)).catch(() => {});
-}
-
 // Prevent native selection and long-press UI from interrupting game gestures.
 for (const type of ['contextmenu', 'selectstart', 'dragstart']) {
 	document.addEventListener(type, event => event.preventDefault(), {capture: true});

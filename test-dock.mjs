@@ -23,10 +23,6 @@ globalThis.document = {
   body: { append(element) { overlay = element; } },
 };
 globalThis.window = new Element();
-globalThis.DOMPoint = class {
-  constructor(x, y) { this.x = x; this.y = y; }
-  matrixTransform() { return this; }
-};
 let frames = new Map(), nextFrame = 0, time = performance.now();
 globalThis.requestAnimationFrame = callback => { frames.set(++nextFrame, callback); return nextFrame; };
 globalThis.cancelAnimationFrame = id => frames.delete(id);

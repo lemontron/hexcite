@@ -90,7 +90,7 @@ main {
 #result-message { margin:0; padding:28px 16px; font-size:24px; font-weight:400; text-align:center; }
 #play-again { display:block; margin:0 auto 20px; padding:8px 18px; border-radius:999px; font-size:12px; }
 .playarea { min-height:0; min-width:0; display:grid; grid-template-rows: 64px minmax(0, 1fr); }
-#board { width:100%; height:100%; min-height:0; display:block; touch-action:manipulation; }
+#board { width:100%; height:100%; min-height:0; display:block; touch-action:none; }
 .cell, .zone, .placed, .piece svg polygon, .floating-piece polygon {
     stroke:#000;
     stroke-width:1px;
@@ -112,7 +112,6 @@ main {
 .controls .quiet { background:#f1f1f1; }
 .controls .quiet:hover { background:#e4e4e4; }
 .piece { position:relative; min-width:0; min-height:0; height:100%; padding:0; flex-grow:0; flex-shrink:0; background:transparent; }
-.piece.selected { background:transparent; }
 .piece:is(button):hover { background:transparent; }
 .piece svg { display:block; width:100%; height:100%; overflow:visible; }
 .piece .count {
@@ -136,7 +135,6 @@ h1 { font-size:clamp(62px, 16vw, 90px); font-weight:400; letter-spacing:-1px; li
 .start-tile.second { background:var(--orange); }
 .start-tile.second:hover { background:#cb5717; }
 .tile-number { font-size:clamp(32px, 10vw, 54px); font-weight:400; line-height:1; margin-bottom:auto; }
-.tile-label { font-size:19px; font-weight:400; margin-top:clamp(6px, 2vw, 14px); }
 .tile-detail { font-size:11px;}
 .resume { background:transparent; color:var(--blue); padding:12px 0; margin-top:14px; font-size:13px; }
 .resume:hover { background:transparent; text-decoration:underline; }
@@ -147,7 +145,6 @@ h1 { font-size:clamp(62px, 16vw, 90px); font-weight:400; letter-spacing:-1px; li
 /* Dock gestures use pointer capture; the floating shape stays above the finger. */
 #pieces { touch-action:none; user-select:none; }
 #pieces .piece.docked-source svg, #pieces .piece.docked-source .count { opacity:0; }
-#board { touch-action:none; }
 .floating-piece { position:fixed; inset:0; width:100%; height:100%; z-index:10; overflow:visible; pointer-events:none; display:none; touch-action:none; }
 .floating-piece.visible { display:block; }
 .floating-piece polygon { pointer-events:auto; touch-action:none; cursor:grab; }

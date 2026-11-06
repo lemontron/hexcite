@@ -1,5 +1,4 @@
 import { hexagonVertices } from './geometry.js';
-export { xy } from './geometry.js';
 
 export const shapes=[{name:'Triangle',v:[[0,0],[1,0],[0,1]]},{name:'Rhombus',v:[[0,0],[1,0],[1,1],[0,1]]},{name:'Trapezoid',v:[[0,0],[2,0],[1,1],[0,1]]},{name:'Hexagon',v:hexagonVertices([0,0],1)},{name:'Large triangle',v:[[0,0],[2,0],[0,2]]},{name:'Large rhombus',v:[[0,0],[2,0],[2,2],[0,2]]},{name:'Large trapezoid',v:[[0,0],[4,0],[2,2],[0,2]]}];
 const key=p=>p.join(',');const edge=(a,b)=>[key(a),key(b)].sort().join('|');
