@@ -1,5 +1,7 @@
 # hexcite
 
+Play at https://hexcite.ace.workers.dev/.
+
 Edit the app in `src/`. Install development dependencies with `npm install`.
 
 - `npm run dev` (or `npm run serve`) starts Vite at http://localhost:5173. Source edits automatically update the browser.
