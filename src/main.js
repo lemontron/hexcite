@@ -5,6 +5,9 @@ import { createPieceDisplay, shapeColors } from './piece-display.js';
 import { hexagonVertices } from './geometry.js';
 import { BOARD_SCALE, boardPoint, svgPoints, screenPoint } from './board-coordinates.js';
 import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './practice.js';
+import { createSounds } from './sounds.js';
+
+const sounds = createSounds();
 
 const $ = id => document.getElementById(id);
 const storageKey = 'hexcite-pocket-v1';
@@ -35,6 +38,7 @@ const docks = [$('player-1-pieces'), $('player-2-pieces')];
 const playerPieces = docks.map((container, player) => createPieceDisplay(container, {
 	onSelect: type => {
 		if (state.turn !== player || busy || state.over) return;
+		sounds.play('select');
 		selected = type;
 		rotation = 0;
 		const move = legal.find(move => move.type === type);
@@ -80,6 +84,8 @@ function refresh() {
 	if (!state.over && !legal.length && !moves(state.board, state.hands[1 - state.turn]).length) {
 		state.over = true;
 		state.scores = state.scores.map((score, player) => score - penalty(state.hands[player]));
+		sounds.play(state.scores[0] === state.scores[1] ? 'draw'
+			: state.mode === 'local' || state.scores[0] > state.scores[1] ? 'win' : 'lose');
 		if (practiceWon(state)) {
 			completed.add(state.practiceNumber);
 			localStorage.setItem(progressKey, JSON.stringify([...completed]));
@@ -228,6 +234,7 @@ async function animatePoints(move, player) {
 }
 
 async function animateBonus(region) {
+	sounds.play('bonus');
 	const effect = svg('g', {class: 'bonus-rainbow'});
 	const defs = svg('defs', {});
 	const clip = svg('clipPath', {id: `bonus-clip-${region}`});
@@ -267,6 +274,7 @@ async function awardPoints(ids, amount, player) {
 	scoring.points -= amount;
 	const target = document.querySelector(`[data-score-player="${player}"]`);
 	target.textContent = state.scores[player] - scoring.points;
+	sounds.play('score');
 	target.animate([
 		{transform: 'scale(1)'}, {transform: 'scale(1.2)'}, {transform: 'scale(1)'},
 	], {duration: 240, easing: 'ease-out'});
@@ -276,6 +284,7 @@ async function commit(move) {
 	if (state.over || scoring) return;
 	const valid = placement(state.board, move.type, move.rot, move.x, move.y);
 	if (!valid) return;
+	sounds.play('place');
 	dock.reset();
 	const player = state.turn;
 	valid.ids.forEach(id => state.board[id] = player + 1);
@@ -303,6 +312,7 @@ async function commit(move) {
 
 function pass() {
 	if (legal.length || state.over || scoring) return;
+	sounds.play('pass');
 	state.turn = 1 - state.turn;
 	if (state.mode === 'practice') state.turnsPlayed++;
 	save();
@@ -327,12 +337,14 @@ const dock = createDock({
 		hidden: $('game-screen').hidden,
 	}),
 	select: type => {
+		sounds.play('select');
 		selected = type;
 		rotation = 0;
 		preview = null;
 		render();
 	},
 	orient: value => {
+		sounds.play('rotate');
 		rotation = value;
 	},
 	preview: move => {
@@ -349,6 +361,7 @@ $('hint').onclick = () => {
 	const best = practiceOpening(state, legal) || [...(preferred.length ? preferred : legal)].sort((a,
 		b) => b.score - a.score || b.ids.length - a.ids.length)[0];
 	if (!best) return;
+	sounds.play('hint');
 	selected = best.type;
 	rotation = best.rot;
 	render();
@@ -398,6 +411,7 @@ document.addEventListener('keydown', event => {
 
 async function startGame(mode, resume = false, number = 1) {
 	if (transitioning) return;
+	sounds.play('start');
 	transitioning = true;
 	const buttons = document.querySelectorAll('#title-screen button');
 	buttons.forEach(button => button.disabled = true);
