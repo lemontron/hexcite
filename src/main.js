@@ -112,9 +112,12 @@ async function finishGame() {
 					const box = shape.getBoundingClientRect();
 					const origin = {x: box.left + box.width / 2, y: box.top + box.height / 2};
 					await awardPoints([], -shapes[type].v.length * 5, player, origin);
+					hand[type]--;
+					renderDocks();
 				}
 			}
 		}
+		save();
 	} finally {
 		scoring = null;
 		if (practiceWon(state)) {
@@ -419,17 +422,39 @@ function renderPracticeMenu() {
 		return button;
 	}));
 }
-function showMenu(practice = false) {
+async function showMenu(practice = false) {
 	if (scoring || transitioning) return;
+	transitioning = true;
 	clearTimeout(computerTimer);
 	dock.reset();
-	$('game-screen').hidden = true;
-	$('game-screen').inert = true;
-	$('title-screen').hidden = false;
+	const game = $('game-screen');
+	const title = $('title-screen');
+	const outgoing = game.hidden ? title : game;
+	outgoing.inert = true;
+	title.inert = true;
+	const fadeOut = outgoing.animate([{opacity: 1}, {opacity: 0}], {
+		duration: 220,
+		easing: 'ease-in',
+		fill: 'forwards',
+	});
+	await fadeOut.finished;
+	game.hidden = true;
+	game.inert = true;
+	title.hidden = false;
 	$('main-menu').hidden = practice;
 	$('practice-menu').hidden = !practice;
 	$('resume').hidden = !state || state.over;
 	renderPracticeMenu();
+	const fadeIn = title.animate([{opacity: 0}, {opacity: 1}], {
+		duration: 320,
+		delay: 100,
+		fill: 'backwards',
+		easing: 'ease-out',
+	});
+	fadeOut.cancel();
+	await fadeIn.finished;
+	title.inert = false;
+	transitioning = false;
 	(practice ? $('practice-back') : $('one-player')).focus({preventScroll: true});
 }
 $('menu').onclick = () => showMenu(state.mode === 'practice');

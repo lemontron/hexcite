@@ -6,7 +6,7 @@ import {penalty, shapes} from '../src/engine.js';
 // Exercise the actual scoring functions with immediate browser animations.
 const source = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const section = (start, end) => source.slice(source.indexOf(start), source.indexOf(end));
-const labels = [], landings = [], renders = [], saved = [], cues = [];
+const labels = [], landings = [], renders = [], saved = [], cues = [], dockHands = [];
 const scores = [0, 1].map(player => ({
   getBoundingClientRect: () => ({left: 400, top: player * 100, width: 40, height: 20}),
   animate: () => ({finished: Promise.resolve()}),
@@ -24,6 +24,7 @@ context = vm.createContext({
     return {getBoundingClientRect: () => ({left: type * 50, top: player * 100, width: 20, height: 40})};
   }})),
   save() { saved.push(structuredClone(context.state)); },
+  renderDocks() { dockHands.push(structuredClone(context.state.hands)); },
   render() { renders.push({scores: context.state.scores.map((score, p) => score - (context.scoring?.points[p] || 0)), result: context.state.over && !context.scoring}); },
   requestAnimationFrame(callback) { callback(); },
   practiceWon: state => state.over && state.scores[0] > state.scores[1],
@@ -56,7 +57,11 @@ assert.deepEqual(labels.filter((_, i) => i % 2 === 0).map(label => label.origin)
 ]);
 assert.deepEqual(landings, [[0, 85], [0, 70], [0, 50], [1, 50]]);
 assert.deepEqual(renders, [{scores: [100, 80], result: false}, {scores: [50, 50], result: true}]);
-assert.deepEqual(saved.map(state => state.scores), [[50, 50]], 'Final scores persist once before playback');
+assert.deepEqual(dockHands.map(hands => [hands[0][0], hands[0][1], hands[1][3]]), [
+  [1, 1, 1], [0, 1, 1], [0, 0, 1], [0, 0, 0],
+], 'Each landing removes one copy; shapes reach zero after their last deduction');
+assert.deepEqual(saved.map(state => state.scores), [[50, 50], [50, 50]], 'Saving emptied hands does not deduct scores again');
+assert.ok(saved.at(-1).hands.every(hand => hand.every(count => count === 0)), 'Emptied hands persist after playback');
 assert.deepEqual(cues, ['score', 'score', 'score', 'score', 'draw']);
 vm.runInContext('refresh()', context);
 assert.equal(labels.length, 8, 'Refreshing a finished game cannot repeat deductions');
