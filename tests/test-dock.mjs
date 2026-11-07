@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createDock } from './src/dock.js';
+import { createDock } from '../src/dock.js';
 
 class Element {
   children = [];

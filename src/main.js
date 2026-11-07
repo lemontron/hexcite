@@ -82,21 +82,49 @@ function refresh() {
 	dock.reset();
 	legal = state.over ? [] : moves(state.board, state.hands[state.turn]);
 	if (!state.over && !legal.length && !moves(state.board, state.hands[1 - state.turn]).length) {
-		state.over = true;
-		state.scores = state.scores.map((score, player) => score - penalty(state.hands[player]));
-		sounds.play(state.scores[0] === state.scores[1] ? 'draw'
-			: state.mode === 'local' || state.scores[0] > state.scores[1] ? 'win' : 'lose');
-		if (practiceWon(state)) {
-			completed.add(state.practiceNumber);
-			localStorage.setItem(progressKey, JSON.stringify([...completed]));
-		}
-		save();
+		finishGame();
+		return;
 	}
 	if (!state.hands[state.turn][selected]) selected = state.hands[state.turn].findIndex(n => n > 0);
 	preview = null;
 	busy = !state.over && state.mode !== 'local' && state.turn === 1;
 	render();
 	if (busy) computerTimer = setTimeout(computerMove, 500);
+}
+
+async function finishGame() {
+	state.over = true;
+	const deductions = state.hands.map(hand => -penalty(hand));
+	state.scores = state.scores.map((score, player) => score + deductions[player]);
+	// Persist final scores once; reloading must never apply penalties a second time.
+	save();
+	scoring = {points: deductions};
+	busy = true;
+	preview = null;
+	render();
+	try {
+		// A resumed game can reach this point before its screen becomes visible.
+		await new Promise(requestAnimationFrame);
+		for (const [player, hand] of state.hands.entries()) {
+			for (const [type, count] of hand.entries()) {
+				for (let piece = 0; piece < count; piece++) {
+					const shape = docks[player].querySelector(`[data-type="${type}"] polygon`);
+					const box = shape.getBoundingClientRect();
+					const origin = {x: box.left + box.width / 2, y: box.top + box.height / 2};
+					await awardPoints([], -shapes[type].v.length * 5, player, origin);
+				}
+			}
+		}
+	} finally {
+		scoring = null;
+		if (practiceWon(state)) {
+			completed.add(state.practiceNumber);
+			localStorage.setItem(progressKey, JSON.stringify([...completed]));
+		}
+		refresh();
+		sounds.play(state.scores[0] === state.scores[1] ? 'draw'
+			: state.mode === 'local' || state.scores[0] > state.scores[1] ? 'win' : 'lose');
+	}
 }
 
 function computerMove() {
@@ -125,10 +153,10 @@ function render() {
 		scoreElement.innerHTML = `
     <div class="score ${state.turn === player && !state.over ? 'active' : ''}">
       <div class="name">${player + 1}P</div>
-      <strong data-score-player="${player}">${score - (scoring?.player === player ? scoring.points : 0)}</strong>
+      <strong data-score-player="${player}">${score - (scoring?.points[player] || 0)}</strong>
     </div>`;
 	});
-	$('result').hidden = !state.over;
+	$('result').hidden = !state.over || !!scoring;
 	$('result-message').textContent = state.over
 		? practice ? practiceWon(state) ? state.practiceNumber === practiceBoards.length ? 'Final board cleared!' : 'Board cleared!' : 'Beat the computer to clear this board.' : state.scores[0] === state.scores[1] ? 'Match drawn' : names[state.scores[0] > state.scores[1] ? 0 : 1] + ' wins!'
 		: '';
@@ -199,20 +227,22 @@ function draw() {
 	renderAction();
 }
 
-async function animatePoints(move, player) {
-	const board = $('board');
-	const matrix = board.getScreenCTM();
+async function animatePoints(move, player, origin) {
 	const target = document.querySelector(`[data-score-player="${player}"]`);
-	if (!matrix || !target) return;
-	// The board cells have equal area, so their mean gives the piece's centroid.
-	const center = move.ids.reduce((sum, id) => {
-		const [x, y] = boardPoint(cells[id].p);
-		return [sum[0] + x / move.ids.length, sum[1] + y / move.ids.length];
-	}, [0, 0]);
-	const origin = screenPoint(center, matrix);
+	if (!target) return;
+	if (!origin) {
+		const matrix = $('board').getScreenCTM();
+		if (!matrix) return;
+		// The board cells have equal area, so their mean gives the piece's centroid.
+		const center = move.ids.reduce((sum, id) => {
+			const [x, y] = boardPoint(cells[id].p);
+			return [sum[0] + x / move.ids.length, sum[1] + y / move.ids.length];
+		}, [0, 0]);
+		origin = screenPoint(center, matrix);
+	}
 	const label = document.createElement('span');
 	label.className = 'placement-points';
-	label.textContent = `+${move.score}`;
+	label.textContent = `${move.score > 0 ? '+' : ''}${move.score}`;
 	Object.assign(label.style, {left: `${origin.x}px`, top: `${origin.y}px`});
 	document.body.append(label);
 	try {
@@ -268,12 +298,12 @@ async function animateBonus(region) {
 	}
 }
 
-async function awardPoints(ids, amount, player) {
+async function awardPoints(ids, amount, player, origin) {
 	if (!amount) return;
-	await animatePoints({ids, score: amount}, player);
-	scoring.points -= amount;
+	await animatePoints({ids, score: amount}, player, origin);
+	scoring.points[player] -= amount;
 	const target = document.querySelector(`[data-score-player="${player}"]`);
-	target.textContent = state.scores[player] - scoring.points;
+	target.textContent = state.scores[player] - scoring.points[player];
 	sounds.play('score');
 	target.animate([
 		{transform: 'scale(1)'}, {transform: 'scale(1.2)'}, {transform: 'scale(1)'},
@@ -294,7 +324,8 @@ async function commit(move) {
 	state.turn = 1 - player;
 	if (state.mode === 'practice') state.turnsPlayed++;
 	save();
-	scoring = {player, points: valid.score};
+	scoring = {points: [0, 0]};
+	scoring.points[player] = valid.score;
 	busy = true;
 	preview = null;
 	render();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { bounds, hexagonVertices } from './src/geometry.js';
-import { BOARD_SCALE, boardPoint, svgPoints, screenPoint, screenScale } from './src/board-coordinates.js';
+import { bounds, hexagonVertices } from '../src/geometry.js';
+import { BOARD_SCALE, boardPoint, svgPoints, screenPoint, screenScale } from '../src/board-coordinates.js';
 
 // Asymmetric geometry catches confusing a bounding center with a vertex mean.
 assert.deepEqual(bounds([[0, 0], [4, 0], [1, 2]]), {

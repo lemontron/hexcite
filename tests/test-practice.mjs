@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './src/practice.js';
-import { cells, moves, placement, penalty } from './src/engine.js';
+import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from '../src/practice.js';
+import { cells, moves, placement, penalty } from '../src/engine.js';
 
 assert.equal(practiceBoards.length, 50);
 assert.deepEqual(practiceBoards.map(b => b.number), Array.from({length:50},(_,i)=>i+1));

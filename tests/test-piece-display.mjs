@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createPieceDisplay } from './src/piece-display.js';
+import { createPieceDisplay } from '../src/piece-display.js';
 
 class Element {
   children = [];

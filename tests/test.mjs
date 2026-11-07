@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';import{cells,regions,shapes,moves,placement,penalty}from'./src/engine.js';
+import assert from 'node:assert/strict';import{cells,regions,shapes,moves,placement,penalty}from'../src/engine.js';
 // On the opening turn, only full-side contact with the center boundary counts.
 const emptyBoard = Array(cells.length).fill(0);
 assert.equal(placement(emptyBoard, 0, 0, 0, 0), null, 'Interior opening triangle is illegal');
