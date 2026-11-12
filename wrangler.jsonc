@@ -3,7 +3,7 @@
   "name": "hexcite",
   "compatibility_date": "2026-11-06",
   "routes": [
-    { "pattern": "hexcite.jamesloper.com", "custom_domain": true }
+    { "pattern": "hexcite.app", "custom_domain": true, "zone_id": "0630f6febc95b0d09498097baba1eb6c" }
   ],
   "assets": {
     "directory": "./dist"

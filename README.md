@@ -1,4 +1,7 @@
-Play Hexcite at https://hexcite.jamesloper.com/
+Play Hexcite at https://hexcite.app/
+
+Visit once online to cache the game and all 50 practice boards for offline play.
+Updates apply after closing and reopening Hexcite.
 
 ---
 

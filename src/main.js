@@ -7,6 +7,10 @@ import { BOARD_SCALE, boardPoint, svgPoints, screenPoint } from './board-coordin
 import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './practice.js';
 import { createSounds } from './sounds.js';
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+	navigator.serviceWorker.register('/sw.js').catch(console.warn);
+}
+
 const sounds = createSounds();
 
 const $ = id => document.getElementById(id);
