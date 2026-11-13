@@ -3,18 +3,20 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "serve": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy",
-    "ci": "npm run build",
-    "test": "node tests/test.mjs && node tests/test-dock.mjs && node tests/test-piece-display.mjs && node tests/test-coordinates.mjs && node tests/test-practice.mjs && node tests/test-endgame.mjs"
+    "test": "node tests/test.mjs && node tests/test-dock.mjs && node tests/test-piece-display.mjs && node tests/test-coordinates.mjs && node tests/test-practice.mjs && node tests/test-endgame.mjs",
+    "ios": "bash scripts/run-ios.sh",
+    "android": "npm run build && cap run android"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "vite": "^8.3.6",
     "wrangler": "^4.158.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
     "@fontsource/gugi": "^5.3.0"
   }
 }

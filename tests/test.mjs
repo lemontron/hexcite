@@ -1,4 +1,17 @@
 import assert from 'node:assert/strict';import{cells,regions,shapes,moves,placement,penalty}from'../src/engine.js';
+import {dealStartingHands} from '../src/starting-hands.js';
+
+// Repeated draws from the same end still consume distinct packets.
+assert.deepEqual(dealStartingHands(() => 0), [
+  [4, 3, 3, 2, 2, 2, 2],
+  [2, 2, 3, 5, 4, 2, 0],
+]);
+// The four bonus packets give each player four random picks, counted in their 18.
+const bonusRolls = [.999, .999, .999, .999, 0, 0, 0, 0, .999, .999, .999, .999];
+assert.deepEqual(dealStartingHands(() => bonusRolls.shift()), [
+  [6, 2, 2, 1, 2, 2, 3],
+  [2, 2, 2, 3, 2, 0, 7],
+]);
 // On the opening turn, only full-side contact with the center boundary counts.
 const emptyBoard = Array(cells.length).fill(0);
 assert.equal(placement(emptyBoard, 0, 0, 0, 0), null, 'Interior opening triangle is illegal');

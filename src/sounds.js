@@ -78,15 +78,18 @@ export function createSounds() {
 				output.gain.value = .12;
 				output.connect(context.destination);
 			}
-			if (context.state !== 'running') context.resume().then(playMusic).catch(() => {});
+			if (context.state !== 'running') {
+				return context.resume().then(playMusic).catch(() => {});
+			}
 			else playMusic();
 		} catch { /* Audio support must never interrupt play. */ }
 	}
 
 	// Unlock synchronously from a gesture, before delayed computer/scoring cues.
-	document.addEventListener('pointerdown', unlock, {capture: true, passive: true});
+	document.addEventListener('pointerdown', event => {
+		if (event.pointerType === 'mouse') unlock();
+	}, {capture: true, passive: true});
 	document.addEventListener('pointerup', unlock, {capture: true, passive: true});
-	document.addEventListener('keydown', unlock, {capture: true});
 	document.addEventListener('visibilitychange', () => {
 		if (!document.hidden) {
 			playMusic();
@@ -108,7 +111,11 @@ export function createSounds() {
 			}
 			if (playNow && track) unlock();
 		},
-		play(name) {
+		async play(name, {fromGesture = false} = {}) {
+			if (fromGesture) {
+				const resumed = unlock();
+				if (resumed) await resumed;
+			}
 			if (document.hidden || !context || context.state !== 'running') return;
 			try {
 				for (const [frequency, delay, duration] of cues[name] || []) {

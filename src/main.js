@@ -1,4 +1,4 @@
-import '@fontsource/gugi/latin-400.css';
+import { Capacitor } from '@capacitor/core';
 import { shapes, cells, centers, regions, regionBonuses, placement, moves, penalty } from './engine.js';
 import { createDock } from './dock.js';
 import { createPieceDisplay, shapeColors } from './piece-display.js';
@@ -6,9 +6,10 @@ import { hexagonVertices } from './geometry.js';
 import { BOARD_SCALE, boardPoint, screenPoint, screenScale } from './board-coordinates.js';
 import { svg, svgPolygon } from './svg.js';
 import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './practice.js';
+import { dealStartingHands } from './starting-hands.js';
 import { createSounds } from './sounds.js';
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
 	navigator.serviceWorker.register('/sw.js').catch(console.warn);
 }
 
@@ -73,21 +74,15 @@ function save() {
 }
 
 function init(mode, number = 1) {
-	const hands = Array.from({length: 2}, () => {
-		const hand = [2, 2, 2, 1, 2, 1, 1];
-		for (let i = 0; i < 3; i++) hand[Math.floor(Math.random() * shapes.length)]++;
-		return hand;
-	});
-	state = {
+	state = mode === 'practice' ? createPracticeState(number) : {
 		board: Array(cells.length).fill(0),
-		hands,
+		hands: dealStartingHands(),
 		scores: [0, 0],
 		turn: 0,
 		placed: [],
 		mode,
 		over: false,
 	};
-	if (mode === 'practice') state = createPracticeState(number);
 	selected = 0;
 	rotation = 0;
 	busy = false;
@@ -245,7 +240,7 @@ function draw() {
 		}
 	});
 	for (const piece of state.placed) {
-		board.append(boardPolygon(piece.v, {fill: '#fff', class: 'placed'}));
+		board.append(boardPolygon(piece.v, {class: 'placed'}));
 	}
 	renderAction();
 }
@@ -454,6 +449,7 @@ async function showMenu(practice = false) {
 	const game = $('game-screen');
 	const title = $('title-screen');
 	const outgoing = game.hidden ? title : game;
+	if (practice && outgoing === title) sounds.play('select', {fromGesture: true});
 	outgoing.inert = true;
 	title.inert = true;
 	const fadeOut = outgoing.animate([{opacity: 1}, {opacity: 0}], {
@@ -471,8 +467,6 @@ async function showMenu(practice = false) {
 	renderPracticeMenu();
 	const fadeIn = title.animate([{opacity: 0}, {opacity: 1}], {
 		duration: 320,
-		delay: 100,
-		fill: 'backwards',
 		easing: 'ease-out',
 	});
 	fadeOut.cancel();
@@ -491,11 +485,10 @@ document.addEventListener('keydown', event => {
 
 async function startGame(mode, resume = false, number = 1) {
 	if (transitioning) return;
-	sounds.play('start');
+	sounds.play('start', {fromGesture: true});
 	transitioning = true;
-	const buttons = document.querySelectorAll('#title-screen button');
-	buttons.forEach(button => button.disabled = true);
 	const title = $('title-screen');
+	title.inert = true;
 	await title.animate([{opacity: 1}, {opacity: 0}], {
 		duration: 220,
 		easing: 'ease-in',
@@ -510,13 +503,10 @@ async function startGame(mode, resume = false, number = 1) {
 	game.inert = false;
 	await game.animate([{opacity: 0}, {opacity: 1}], {
 		duration: 320,
-		delay: 100,
-		fill: 'backwards',
 		easing: 'ease-out',
 	}).finished;
 	transitioning = false;
 	document.querySelector('.controls button:not([hidden]):not(:disabled)')?.focus({preventScroll: true});
-	buttons.forEach(button => button.disabled = false);
 }
 
 try {
@@ -527,6 +517,8 @@ if (state && !state.over) $('resume').hidden = false;
 $('one-player').onclick = () => startGame('ai');
 $('two-player').onclick = () => startGame('local');
 $('resume').onclick = () => startGame(state.mode, true);
+// Set the Resume button's visibility before the centered menu is first shown.
+$('main-menu').hidden = false;
 renderPracticeMenu();
 // Prevent native selection and long-press UI from interrupting game gestures.
 for (const type of ['contextmenu', 'selectstart', 'dragstart']) {

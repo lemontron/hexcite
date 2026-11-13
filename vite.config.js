@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import {createHash} from 'node:crypto';
 import {readdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 
 export default defineConfig({
 	plugins: [{
@@ -16,8 +17,8 @@ export default defineConfig({
 				hash.update(file).update(readFileSync(`dist${file}`));
 			}
 
-			// Cloudflare serves index.html at /, so cache that URL without a redirect.
-			const urls = files.map(file => file === '/index.html' ? '/' : file);
+			// Cache HTML at the clean URLs Cloudflare serves.
+			const urls = files.map(file => file === '/index.html' ? '/' : file.replace(/\.html$/, ''));
 			const worker = template
 				.replace('__VERSION__', hash.digest('hex').slice(0, 16))
 				.replace('__FILES__', JSON.stringify(urls));
@@ -27,5 +28,15 @@ export default defineConfig({
 	root: 'src',
 	base: './',
 	server: {host: '0.0.0.0', port: 5173, strictPort: true},
-	build: {outDir: '../dist', emptyOutDir: true},
+	build: {
+		outDir: '../dist',
+		emptyOutDir: true,
+		rolldownOptions: {
+			input: [
+				fileURLToPath(new URL('./src/index.html', import.meta.url)),
+				fileURLToPath(new URL('./src/privacy.html', import.meta.url)),
+				fileURLToPath(new URL('./src/support.html', import.meta.url)),
+			],
+		},
+	},
 });

@@ -1,0 +1,10 @@
+{
+  "appId": "app.hexcite.game",
+  "appName": "Hexcite",
+  "webDir": "dist",
+  "plugins": {
+    "SystemBars": {
+      "style": "LIGHT"
+    }
+  }
+}

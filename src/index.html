@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,minimum-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icon.svg">
@@ -11,8 +11,8 @@
 </head>
 <body>
 <section id="title-screen">
-    <div id="main-menu" class="title-content">
-        <h1>HEXCITE</h1>
+    <div id="main-menu" class="title-content" hidden>
+        <h1 class="title-logo"><img src="/logo.svg" alt="Hexcite" width="144" height="31"></h1>
         <div class="start-tiles">
             <button id="one-player" class="start-tile">
                 <span class="tile-number">1P</span>
@@ -23,8 +23,8 @@
                 <span class="tile-detail">Play on this device</span>
             </button>
         </div>
-        <button id="practice" class="practice-start">Practice <span>50 original boards</span></button>
-        <div class="music-setting">
+        <button id="practice" class="practice-start">Practice <span>50 boards</span></button>
+        <div class="music-setting" style="display:none">
             <span id="music-label">Music</span>
             <div id="music-tracks" role="group" aria-labelledby="music-label">
                 <button type="button" value="1" aria-label="Track 1" aria-pressed="false">1</button>
@@ -50,7 +50,9 @@
 <main id="game-screen" hidden inert>
     <section class="player-panel" data-player="0">
         <div id="player-1-score"></div>
-        <div id="player-1-pieces" class="piece-display"><svg class="piece-strip" width="0" height="0"></svg></div>
+        <div id="player-1-pieces" class="piece-display">
+            <svg class="piece-strip" width="0" height="0"></svg>
+        </div>
     </section>
     <div class="game-center">
         <div class="board-area">
@@ -71,7 +73,9 @@
         </div>
     </div>
     <section class="player-panel" data-player="1">
-        <div id="player-2-pieces" class="piece-display"><svg class="piece-strip" width="0" height="0"></svg></div>
+        <div id="player-2-pieces" class="piece-display">
+            <svg class="piece-strip" width="0" height="0"></svg>
+        </div>
         <div id="player-2-score"></div>
     </section>
 </main>

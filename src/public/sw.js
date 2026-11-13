@@ -23,7 +23,9 @@ self.onfetch = event => {
 
   event.respondWith((async () => {
     const cache = await cacheReady;
-    const cacheKey = request.mode === 'navigate' ? '/' : request;
+    const path = new URL(request.url).pathname;
+    const isStandalonePage = path === '/support' || path === '/privacy';
+    const cacheKey = request.mode === 'navigate' ? (isStandalonePage ? path : '/') : request;
     const cachedResponse = await cache.match(cacheKey);
     return cachedResponse || fetch(request);
   })());
