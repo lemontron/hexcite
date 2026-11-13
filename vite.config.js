@@ -7,7 +7,7 @@ export default defineConfig({
 	plugins: [{
 		name: 'offline',
 		apply: 'build',
-		closeBundle() {
+		writeBundle() {
 			const files = readdirSync('dist', {recursive: true, withFileTypes: true})
 				.filter(file => file.isFile() && !file.name.startsWith('_') && file.name !== 'sw.js')
 				.map(file => `${file.parentPath}/${file.name}`.slice('dist'.length));

@@ -1,0 +1,55 @@
+{
+  "fill": {
+    "solid": "extended-srgb:0.02745,0.03529,0.11373,1.00000"
+  },
+  "groups": [
+    {
+      "name": "Tiles",
+      "layers": [
+        {
+          "name": "Blue 1",
+          "image-name": "Blue-1.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "Lilac 2",
+          "image-name": "Lilac-2.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "Lilac 3",
+          "image-name": "Lilac-3.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "Lilac 4",
+          "image-name": "Lilac-4.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "Blue 5",
+          "image-name": "Blue-5.svg",
+          "glass": true,
+          "hidden": false
+        },
+        {
+          "name": "Blue 6",
+          "image-name": "Blue-6.svg",
+          "glass": true,
+          "hidden": false
+        }
+      ],
+      "lighting": "individual",
+      "specular": true
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "iOS"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="215.277778" viewBox="0 0 144 31" role="img" aria-labelledby="title">
+  <title id="title">Hexcite</title>
+  <defs>
+    <path id="e" d="M27.5.5h19v6h-13v18h13v6h-19Z"/>
+    <path id="diamond" d="m34 10.65 9.45 4.85L34 20.35l-9.45-4.85Z"/>
+    <radialGradient id="moon-gradient" gradientUnits="userSpaceOnUse" cx="79.856" cy="8.66" r="17.544">
+      <stop offset="0" stop-color="#588dff"/>
+      <stop offset=".36" stop-color="#588dff"/>
+      <stop offset="1" stop-color="#005cda"/>
+    </radialGradient>
+  </defs>
+  <g fill="#000" stroke="#b6bfda" stroke-linejoin="miter">
+    <path d="M.5.5h6v30h-6zm16 0h6v30h-6z"/>
+    <use href="#e"/>
+    <path d="M48.6.5h5.55l5.35 9.33L64.85.5h6.55l-8.35 14.6 8.8 15.4h-6.72Z"/>
+    <path d="M98.5 8.5h6v22h-6zm13.5-2.2h5.5v24.2H112z"/>
+    <use href="#e" x="97"/>
+  </g>
+  <g fill="#424f71" stroke="#b6bfda" stroke-linejoin="miter">
+    <path d="M3.45 12.5h16.1l-5 6H8.45Z"/>
+    <use href="#diamond"/>
+    <path d="M48.8 30.5 55.7 18.4l6.45 12.1Z"/>
+    <path d="M96.6.5h9.8l-4.9 5.85zM106.35 6.5l4.8-6h6.7l4.8 6Z"/>
+    <use href="#diamond" x="97"/>
+  </g>
+  <!-- The long circular arc joins the two points where the hexagon cuts into the moon. -->
+  <path fill="url(#moon-gradient)" transform="translate(-1 0)"
+    d="M94.766368 8.589002
+       A12.9 12.9 0 1 0 97.293604 18.053391
+       L92.139187 22.378459 84.621646 19.642298 83.232459 11.763839 89.360813 6.621541Z"/>
+</svg>
