@@ -3,7 +3,8 @@ import { shapes, cells, centers, regions, regionBonuses, placement, moves, penal
 import { createDock } from './dock.js';
 import { createPieceDisplay, shapeColors } from './piece-display.js';
 import { hexagonVertices } from './geometry.js';
-import { BOARD_SCALE, boardPoint, svgPoints, screenPoint } from './board-coordinates.js';
+import { BOARD_SCALE, boardPoint, screenPoint, screenScale } from './board-coordinates.js';
+import { svg, svgPolygon } from './svg.js';
 import { practiceBoards, createPracticeState, practiceWon, practiceOpening } from './practice.js';
 import { createSounds } from './sounds.js';
 
@@ -15,6 +16,13 @@ const sounds = createSounds();
 
 const $ = id => document.getElementById(id);
 const storageKey = 'hexcite-pocket-v1';
+const musicButtons = [...$('music-tracks').querySelectorAll('button')];
+for (const button of musicButtons) {
+	button.onclick = () => {
+		for (const option of musicButtons) option.setAttribute('aria-pressed', option === button);
+		sounds.setMusicTrack(Number(button.value), {playNow: true});
+	};
+}
 let state;
 let selected = 0;
 let heldType = null;
@@ -32,14 +40,12 @@ try {
 	if (Array.isArray(saved)) completed = new Set(saved.filter(n => Number.isInteger(n) && n >= 1 && n <= 50));
 } catch { /* Ignore invalid practice progress. */ }
 
-function svg(tag, attributes) {
-	const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
-	for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
-	return element;
-}
+const boardPolygon = (vertices, attributes) => svgPolygon(vertices.map(boardPoint), attributes);
 
+const gameScreen = $('game-screen');
+const boardElement = $('board');
 const docks = [$('player-1-pieces'), $('player-2-pieces')];
-const playerPieces = docks.map((container, player) => createPieceDisplay(container, {
+const playerPieces = docks.map((container, player) => createPieceDisplay(container.firstElementChild, {
 	onSelect: type => {
 		if (state.turn !== player || busy || state.over) return;
 		sounds.play('select');
@@ -53,6 +59,14 @@ const playerPieces = docks.map((container, player) => createPieceDisplay(contain
 		}
 	},
 }));
+const dockResize = new ResizeObserver(() => {
+	if (gameScreen.hidden) return;
+	const matrix = boardElement.getScreenCTM();
+	if (!matrix) return;
+	const scale = screenScale(matrix);
+	playerPieces.forEach(display => display.fit(scale));
+});
+for (const element of [boardElement, ...docks]) dockResize.observe(element);
 
 function save() {
 	localStorage.setItem(storageKey, JSON.stringify(state));
@@ -201,14 +215,16 @@ function draw() {
 	mix.append(svg('path', {d: 'M0 0h5v5H0z M5 5h5v5H5z', class: 'mix-lilac'}));
 	defs.append(mix);
 	board.append(defs);
+	const grid = svg('g', {class: 'board-cells'});
+	board.append(grid);
 	cells.forEach(cell => {
 		const regionClass = cell.r === 0 ? 'center-region' : regionBonuses[cell.r] === 30 ? 'lilac-region' : 'sky-region';
-		const polygon = svg('polygon', {points: svgPoints(cell.v), class: `cell ${regionClass}`});
-		board.append(polygon);
+		const polygon = boardPolygon(cell.v, {class: `cell ${regionClass}`});
+		grid.append(polygon);
 	});
 	centers.forEach((center, region) => {
 		const vertices = hexagonVertices(center);
-		board.append(svg('polygon', {points: svgPoints(vertices), class: 'zone'}));
+		board.append(boardPolygon(vertices, {class: 'zone'}));
 		if (region) {
 			const [x, y] = boardPoint(center);
 			const distance = Math.hypot(x, y);
@@ -229,7 +245,7 @@ function draw() {
 		}
 	});
 	for (const piece of state.placed) {
-		board.append(svg('polygon', {points: svgPoints(piece.v), fill: '#fff', class: 'placed'}));
+		board.append(boardPolygon(piece.v, {fill: '#fff', class: 'placed'}));
 	}
 	renderAction();
 }
@@ -258,6 +274,7 @@ async function animatePoints(move, player, origin) {
 			{transform: 'translate(-50%, -50%) translateY(-10px)', offset: .5, easing: 'ease-in'},
 			{transform: 'translate(-50%, -50%) translateY(0)'},
 		], {duration: 360, easing: 'ease-out'}).finished;
+		playTurnSound('score', player);
 		const destination = target.getBoundingClientRect();
 		const dx = destination.left + destination.width / 2 - origin.x;
 		const dy = destination.top + destination.height / 2 - origin.y;
@@ -270,12 +287,16 @@ async function animatePoints(move, player, origin) {
 	}
 }
 
-async function animateBonus(region) {
-	sounds.play('bonus');
+function playTurnSound(name, player) {
+	if (state.over || state.mode !== 'practice' || player === 0) sounds.play(name);
+}
+
+async function animateBonus(region, player) {
+	playTurnSound('bonus', player);
 	const effect = svg('g', {class: 'bonus-rainbow'});
 	const defs = svg('defs', {});
 	const clip = svg('clipPath', {id: `bonus-clip-${region}`});
-	clip.append(svg('polygon', {points: svgPoints(hexagonVertices(centers[region]))}));
+	clip.append(boardPolygon(hexagonVertices(centers[region])));
 	const gradient = svg('linearGradient', {id: `bonus-rainbow-${region}`});
 	['#ff1744', '#ff9100', '#ffea00', '#00e676', '#00b0ff', '#651fff', '#f500f5'].forEach((color, index) => {
 		gradient.append(svg('stop', {offset: `${index / 6 * 100}%`, 'stop-color': color}));
@@ -311,7 +332,6 @@ async function awardPoints(ids, amount, player, origin) {
 	scoring.points[player] -= amount;
 	const target = document.querySelector(`[data-score-player="${player}"]`);
 	target.textContent = state.scores[player] - scoring.points[player];
-	sounds.play('score');
 	target.animate([
 		{transform: 'scale(1)'}, {transform: 'scale(1.2)'}, {transform: 'scale(1)'},
 	], {duration: 240, easing: 'ease-out'});
@@ -321,9 +341,9 @@ async function commit(move) {
 	if (state.over || scoring) return;
 	const valid = placement(state.board, move.type, move.rot, move.x, move.y);
 	if (!valid) return;
-	sounds.play('place');
-	dock.reset();
 	const player = state.turn;
+	playTurnSound('place', player);
+	dock.reset();
 	valid.ids.forEach(id => state.board[id] = player + 1);
 	state.hands[player][valid.type]--;
 	state.scores[player] += valid.score;
@@ -339,7 +359,7 @@ async function commit(move) {
 	try {
 		await awardPoints(valid.ids, valid.score - valid.bonus, player);
 		for (const {region, points} of valid.completedRegions) {
-			await animateBonus(region);
+			await animateBonus(region, player);
 			await awardPoints(regions[region], points, player);
 		}
 	} finally {
@@ -350,7 +370,7 @@ async function commit(move) {
 
 function pass() {
 	if (legal.length || state.over || scoring) return;
-	sounds.play('pass');
+	playTurnSound('pass', state.turn);
 	state.turn = 1 - state.turn;
 	if (state.mode === 'practice') state.turnsPlayed++;
 	save();
@@ -358,7 +378,7 @@ function pass() {
 }
 
 const dock = createDock({
-	docks, board: $('board'),
+	docks, board: boardElement, gameScreen,
 	reserve: type => {
 		heldType = type;
 		renderDocks();

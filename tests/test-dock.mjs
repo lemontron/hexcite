@@ -10,6 +10,7 @@ class Element {
   classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
   append(child) { this.children.push(child); }
   querySelector() { return this.children[0]; }
+  querySelectorAll() { return this.children; }
   setAttribute(key, value) { this.attributes[key] = value; }
   addEventListener(type, handler) { this.listeners[type] = handler; }
   setPointerCapture() {}
@@ -36,22 +37,25 @@ function settle() {
   assert.equal(frames.size, 0, 'Animation settles');
 }
 
-const dock = new Element(), otherDock = new Element(), board = new Element();
+const dock = new Element(), otherDock = new Element(), board = new Element(), gameScreen = new Element();
+const boardCells = new Element();
+boardCells.getBoundingClientRect = () => board.getBoundingClientRect();
+board.append(boardCells);
 const model = { player: 0, type: 0, rotation: 0, moves: [], hand: [1], color: '#f00' };
 const selections = [];
 let reserved = null;
 const controller = createDock({
-  docks: [dock, otherDock], board, model: () => model, select(type) { model.type = type; selections.push(type); }, preview() {},
+  docks: [dock, otherDock], board, gameScreen, model: () => model, select(type) { model.type = type; selections.push(type); }, preview() {},
   orient(value) { model.rotation = value; },
   reserve(type) { reserved = type; },
 });
-const piece = overlay.children[0];
+const [piece] = overlay.children;
 function center() {
   const points = piece.attributes.points.split(' ').map(p => p.split(',').map(Number));
   return [0, 1].map(axis => (Math.min(...points.map(p => p[axis])) + Math.max(...points.map(p => p[axis]))) / 2);
 }
-function pointer(target, type, x, y) {
-  target.listeners[type]({ pointerId: 1, pointerType: 'touch', clientX: x, clientY: y, type, preventDefault() {} });
+function pointer(target, type, x, y, hit = null) {
+  target.listeners[type]({ pointerId: 1, pointerType: 'touch', clientX: x, clientY: y, type, currentTarget: target, target: { closest: () => hit }, preventDefault() {} });
 }
 function near(actual, expected) {
   actual.forEach((value, i) => assert(Math.abs(value - expected[i]) < .25, `${actual} should equal ${expected}`));
@@ -78,6 +82,22 @@ settle();
 near(center(), [origin[0] - 15, origin[1] + 30]);
 pointer(board, 'pointerup', -215, 180);
 
+origin = center();
+pointer(gameScreen, 'pointerdown', 300, 350);
+pointer(gameScreen, 'pointermove', 330, 355);
+pointer(gameScreen, 'pointerup', 330, 355);
+settle();
+near(center(), [origin[0] + 30, origin[1] + 5]);
+pointer(gameScreen, 'pointerdown', 300, 350);
+pointer(gameScreen, 'pointerup', 300, 350);
+assert.equal(model.rotation, 0, 'A background tap does not rotate the piece');
+origin = center();
+pointer(gameScreen, 'pointerdown', 300, 350, {});
+pointer(gameScreen, 'pointermove', 330, 355);
+pointer(gameScreen, 'pointerup', 330, 355);
+settle();
+near(center(), origin);
+
 // Tapping anywhere on the board rotates in place.
 origin = center();
 pointer(board, 'pointerdown', 400, 400);
@@ -102,7 +122,9 @@ dock.children = Array.from({length: 7}, (_, type) => {
   const item = new Element();
   item.dataset.type = String(type);
   item.getBoundingClientRect = () => ({left: type * 100, right: (type + 1) * 100});
-  item.append(new Element());
+  const shape = new Element();
+  shape.getBoundingClientRect = item.getBoundingClientRect;
+  item.append(shape);
   return item;
 });
 pointer(dock, 'pointerdown', 50, 500);
@@ -160,4 +182,67 @@ model.busy = true;
 selectedCount = selections.length;
 pointer(otherDock, 'pointerdown', 110, 582);
 assert.equal(selections.length, selectedCount, 'No grabs during computer moves or scoring');
-console.log('Passed relative panning, rotation, empty slots, fixed player docks, turn restrictions, and both pull directions.');
+// Landscape docks select along Y and pull horizontally toward the board.
+model.busy = false;
+model.hand = [1, 1];
+board.getBoundingClientRect = () => ({left: 100, right: 500, top: 0, bottom: 300});
+for (const [player, left, startX, endX, expectedX] of [[0, 0, 50, 180, 270], [1, 500, 550, 420, 330]]) {
+  controller.reset();
+  model.player = player;
+  const container = [dock, otherDock][player];
+  container.getBoundingClientRect = () => ({left, right: left + 100, top: 0, bottom: 300});
+  container.children = [0, 1].map(type => {
+    const item = new Element();
+    item.dataset.type = String(type);
+    item.getBoundingClientRect = () => ({left, right: left + 100, top: 150 * type, bottom: 150 * (type + 1)});
+    const shape = new Element();
+    shape.getBoundingClientRect = () => ({
+      left: left + 40, right: left + 60, top: 150 * type + 50, bottom: 150 * type + 70, width: 20, height: 20,
+    });
+    item.append(shape);
+    return item;
+  });
+  pointer(container, 'pointerdown', startX, 80);
+  assert.equal(reserved, 0);
+  pointer(container, 'pointermove', startX, 220);
+  assert.equal(reserved, 1, 'Moving vertically within the dock switches slots');
+  pointer(container, 'pointermove', endX, 220);
+  settle();
+  near(center(), [expectedX, 220]);
+  pointer(container, 'pointerup', endX, 220);
+}
+
+// A boardward diagonal can cross a neighboring slot before leaving the dock.
+for (const sideBySide of [false, true]) {
+  controller.reset();
+  model.player = 0;
+  const point = (across, along) => sideBySide ? [along, across] : [across, along];
+  const rect = (across, along, acrossSize, alongSize) => {
+    const [left, top] = point(across, along);
+    const [width, height] = point(acrossSize, alongSize);
+    return {left, top, width, height, right: left + width, bottom: top + height};
+  };
+  board.getBoundingClientRect = () => rect(0, 70, 400, 400);
+  boardCells.getBoundingClientRect = () => rect(10, 80, 380, 380);
+  dock.getBoundingClientRect = () => rect(0, 0, 400, 64);
+  dock.children = [0, 1].map(type => {
+    const item = new Element();
+    item.dataset.type = String(type);
+    item.getBoundingClientRect = () => rect(90 + 30 * type, 22, 20, 20);
+    const shape = new Element();
+    shape.getBoundingClientRect = item.getBoundingClientRect;
+    item.append(shape);
+    return item;
+  });
+  pointer(dock, 'pointerdown', ...point(109, 24));
+  pointer(dock, 'pointermove', ...point(140, 64));
+  assert.equal(reserved, 0, 'Aiming at the board keeps the held piece across a slot boundary');
+  pointer(dock, 'pointermove', ...point(140, 80));
+  assert.equal(reserved, 0, 'Reaching the board edge keeps the held piece');
+  pointer(dock, 'pointerup', ...point(140, 80));
+  pointer(dock, 'pointerdown', ...point(109, 24));
+  pointer(dock, 'pointermove', ...point(130, 24));
+  assert.equal(reserved, 1, 'Moving along the dock can still switch pieces');
+  pointer(dock, 'pointercancel', ...point(130, 24));
+}
+console.log('Passed panning, rotation, dock slots, turn restrictions, and boardward drag intent in both layouts.');

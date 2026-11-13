@@ -24,6 +24,19 @@
             </button>
         </div>
         <button id="practice" class="practice-start">Practice <span>50 original boards</span></button>
+        <div class="music-setting">
+            <span id="music-label">Music</span>
+            <div id="music-tracks" role="group" aria-labelledby="music-label">
+                <button type="button" value="1" aria-label="Track 1" aria-pressed="false">1</button>
+                <button type="button" value="6" aria-label="Track 2" aria-pressed="false">2</button>
+                <button type="button" value="7" aria-label="Track 3" aria-pressed="false">3</button>
+                <button type="button" value="8" aria-label="Track 4" aria-pressed="false">4</button>
+                <button type="button" value="10" aria-label="Track 5" aria-pressed="false">5</button>
+                <button type="button" value="11" aria-label="Track 6" aria-pressed="false">6</button>
+                <button type="button" value="14" aria-label="Track 7" aria-pressed="false">7</button>
+                <button type="button" value="0" aria-pressed="true">Off</button>
+            </div>
+        </div>
         <button id="resume" class="resume" hidden>Resume Match</button>
     </div>
     <div id="practice-menu" class="title-content" hidden>
@@ -37,26 +50,28 @@
 <main id="game-screen" hidden inert>
     <section class="player-panel" data-player="0">
         <div id="player-1-score"></div>
-        <div id="player-1-pieces" class="piece-display"></div>
+        <div id="player-1-pieces" class="piece-display"><svg class="piece-strip" width="0" height="0"></svg></div>
     </section>
-    <div class="board-area">
-        <svg id="board" viewBox="-270 -250 540 500"></svg>
-        <div id="result" hidden>
-            <div id="result-title" class="result-titlebar">Match Complete</div>
-            <p id="result-message" aria-live="polite"></p>
-            <button id="play-again" class="primary">Play Again</button>
+    <div class="game-center">
+        <div class="board-area">
+            <svg id="board" viewBox="-243 -225 486 450"></svg>
+            <div id="result" hidden>
+                <div id="result-title" class="result-titlebar">Match Complete</div>
+                <p id="result-message" aria-live="polite"></p>
+                <button id="play-again" class="primary">Play Again</button>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="menu" class="quiet">Menu</button>
+            <span id="practice-status" hidden aria-label="Practice board"></span>
+            <button id="retry" class="quiet" hidden>Retry</button>
+            <button id="hint" class="quiet">Hint</button>
+            <button id="place" class="primary" hidden disabled>Place Piece</button>
+            <button id="pass" class="quiet" hidden>Pass</button>
         </div>
     </div>
-    <div class="controls">
-        <button id="menu" class="quiet">Menu</button>
-        <span id="practice-status" hidden aria-label="Practice board"></span>
-        <button id="retry" class="quiet" hidden>Retry</button>
-        <button id="hint" class="quiet">Hint</button>
-        <button id="place" class="primary" hidden disabled>Place Piece</button>
-        <button id="pass" class="quiet" hidden>Pass</button>
-    </div>
     <section class="player-panel" data-player="1">
-        <div id="player-2-pieces" class="piece-display"></div>
+        <div id="player-2-pieces" class="piece-display"><svg class="piece-strip" width="0" height="0"></svg></div>
         <div id="player-2-score"></div>
     </section>
 </main>

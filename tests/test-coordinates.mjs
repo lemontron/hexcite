@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { bounds, hexagonVertices } from '../src/geometry.js';
-import { BOARD_SCALE, boardPoint, svgPoints, screenPoint, screenScale } from '../src/board-coordinates.js';
+import { BOARD_SCALE, boardPoint, screenPoint, screenScale } from '../src/board-coordinates.js';
+import { polygonPoints } from '../src/svg.js';
 
 // Asymmetric geometry catches confusing a bounding center with a vertex mean.
 assert.deepEqual(bounds([[0, 0], [4, 0], [1, 2]]), {
@@ -9,7 +10,7 @@ assert.deepEqual(bounds([[0, 0], [4, 0], [1, 2]]), {
 assert.deepEqual(hexagonVertices([3, -2]), [[5, -2], [3, 0], [1, 0], [1, -2], [3, -4], [5, -4]]);
 assert.deepEqual(boardPoint([2, 0]), [BOARD_SCALE * 2, 0]);
 assert.deepEqual(boardPoint([0, 2]), [BOARD_SCALE, BOARD_SCALE * Math.sqrt(3)]);
-assert.equal(svgPoints([[0, 0], [2, 0]]), `0,0 ${BOARD_SCALE * 2},0`);
+assert.equal(polygonPoints([[0, 0], [2, 0]].map(boardPoint)), `0,0 ${BOARD_SCALE * 2},0`);
 
 // Screen projection includes translation, nonuniform scaling, and shear.
 assert.deepEqual(screenPoint([10, 20], {a: 2, b: .5, c: -.25, d: 3, e: 100, f: -50}), {x: 115, y: 15});

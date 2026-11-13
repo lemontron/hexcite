@@ -34,7 +34,7 @@ context = vm.createContext({
     querySelector: selector => scores[Number(selector.match(/\d+/)[0])],
     createElement() {
       const label = {style: {}, remove() {}, animate(frames, options) {
-        labels.push({text: this.textContent, origin: {...this.style}, frames, options});
+        labels.push({text: this.textContent, origin: {...this.style}, frames, options, cueCount: cues.length});
         return {finished: Promise.resolve()};
       }};
       return label;
@@ -63,6 +63,8 @@ assert.deepEqual(dockHands.map(hands => [hands[0][0], hands[0][1], hands[1][3]])
 assert.deepEqual(saved.map(state => state.scores), [[50, 50], [50, 50]], 'Saving emptied hands does not deduct scores again');
 assert.ok(saved.at(-1).hands.every(hand => hand.every(count => count === 0)), 'Emptied hands persist after playback');
 assert.deepEqual(cues, ['score', 'score', 'score', 'score', 'draw']);
+assert.deepEqual(labels.map(label => label.cueCount), [0, 1, 1, 2, 2, 3, 3, 4],
+  'Each deduction sounds after the bounce, before the flight');
 vm.runInContext('refresh()', context);
 assert.equal(labels.length, 8, 'Refreshing a finished game cannot repeat deductions');
 
@@ -75,6 +77,9 @@ context.boardPoint = p => p;
 context.screenPoint = ([x, y]) => ({x, y});
 await vm.runInContext('awardPoints([0], 15, 0)', context);
 assert.equal(labels[8].text, '+15');
+assert.equal(labels[8].cueCount, 5, 'The award starts bouncing before the cue');
+assert.equal(labels[9].cueCount, 6, 'The award sounds before the flight');
+assert.equal(cues.length, 6, 'The landing plays no second cue');
 assert.deepEqual(labels[8].frames, labels[0].frames, 'Award and deduction share the bounce');
 assert.deepEqual(labels[8].options, labels[0].options);
 assert.deepEqual(labels[9].options, labels[1].options, 'Award and deduction share flight timing');

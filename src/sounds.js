@@ -16,7 +16,57 @@ const cues = {
 export function createSounds() {
 	let context;
 	let output;
+	let track = 0;
+	let musicBuffer;
+	let musicSource;
+	let musicWorker;
+	let musicOffset = 0;
+	let musicStartedAt = 0;
 	const voices = new Set();
+
+	function stopMusic() {
+		if (!musicSource) return;
+		musicOffset = (musicOffset + context.currentTime - musicStartedAt) % musicBuffer.duration;
+		musicSource.stop();
+		musicSource.disconnect();
+		musicSource = null;
+	}
+
+	function playMusic() {
+		if (!track || document.hidden || context?.state !== 'running' || musicSource) return;
+		try {
+			if (!musicBuffer) {
+				if (musicWorker) return;
+				const worker = new Worker(new URL('./music-worker.js', import.meta.url), {type: 'module'});
+				musicWorker = worker;
+				worker.onmessage = ({data: {samples, sampleRate}}) => {
+					if (worker !== musicWorker) return;
+					worker.terminate();
+					musicWorker = null;
+					musicBuffer = context.createBuffer(1, samples.length, sampleRate);
+					musicBuffer.copyToChannel(samples, 0);
+					playMusic();
+				};
+				worker.onerror = () => {
+					worker.terminate();
+					if (worker === musicWorker) musicWorker = null;
+				};
+				worker.postMessage(track);
+				return;
+			}
+			const source = context.createBufferSource();
+			const volume = context.createGain();
+			volume.gain.value = .14;
+			volume.connect(context.destination);
+			source.buffer = musicBuffer;
+			source.loop = true;
+			source.connect(volume);
+			source.onended = () => volume.disconnect();
+			musicStartedAt = context.currentTime;
+			source.start(musicStartedAt, musicOffset);
+			musicSource = source;
+		} catch { /* Audio support must never interrupt play. */ }
+	}
 
 	function unlock() {
 		try {
@@ -28,19 +78,36 @@ export function createSounds() {
 				output.gain.value = .12;
 				output.connect(context.destination);
 			}
-			if (context.state === 'suspended') context.resume().catch(() => {});
+			if (context.state !== 'running') context.resume().then(playMusic).catch(() => {});
+			else playMusic();
 		} catch { /* Audio support must never interrupt play. */ }
 	}
 
 	// Unlock synchronously from a gesture, before delayed computer/scoring cues.
 	document.addEventListener('pointerdown', unlock, {capture: true, passive: true});
+	document.addEventListener('pointerup', unlock, {capture: true, passive: true});
 	document.addEventListener('keydown', unlock, {capture: true});
 	document.addEventListener('visibilitychange', () => {
-		if (!document.hidden) return;
+		if (!document.hidden) {
+			playMusic();
+			return;
+		}
+		stopMusic();
 		for (const voice of voices) voice.stop();
 	});
 
 	return {
+		setMusicTrack(number, {playNow = false} = {}) {
+			if (track !== number) {
+				stopMusic();
+				musicWorker?.terminate();
+				musicWorker = null;
+				musicBuffer = null;
+				musicOffset = 0;
+				track = number;
+			}
+			if (playNow && track) unlock();
+		},
 		play(name) {
 			if (document.hidden || !context || context.state !== 'running') return;
 			try {
